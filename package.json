@@ -1,10 +1,5 @@
 {
-  "name": "cleanfirebase-api",
+  "name": "cacapalavras-api",
   "version": "1.0.0",
-  "type": "module",
-  "main": "api/cleanup.js",
-  "dependencies": {
-    "firebase-admin": "^12.0.0",
-    "firebase": "^11.0.0"
-  }
+  "type": "module"
 }
