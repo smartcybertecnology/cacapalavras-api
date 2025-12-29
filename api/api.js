@@ -9,6 +9,7 @@ export default async function handler(request) {
   // Domínios permitidos
   const allowedDomains = [
     'playjogosgratis.com',
+    'playjogosgratis.com/cacapalavras/',
     'localhost',
     '127.0.0.1'
   ];
@@ -186,3 +187,4 @@ console.log('🎮 Jogo Caça-Palavras carregado da API!');`;
     }
   });
 }
+
