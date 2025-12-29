@@ -1,182 +1,218 @@
-// api/api.js - RETORNA DADOS JSON COM VERIFICAÇÃO DE DOMÍNIO
+// api/api.js - API para o Caça-Palavras Mágico
 export const config = { runtime: 'edge' };
 
-// Domínios autorizados para acesso direto
-const ALLOWED_DOMAINS = [
-  'playjogosgratis.com',
-  'cacapalavras-api.vercel.app',
-  'localhost:3000',
-  'localhost:5173'
+// Domínios autorizados
+const ALLOWED_ORIGINS = [
+  'https://playjogosgratis.com',
+  'https://www.playjogosgratis.com',
+  'https://cacapalavras-api.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000'
 ];
 
-// Dados completos do jogo em JSON
+// Dados completos do jogo
 const GAME_DATA = {
-  status: "success",
-  game: "caça-palavras-magico",
-  version: "2.0.0",
-  requiresAPI: true,
-  data: {
-    levels: {
-      easy: { size: 6, words: 6, timeBonus: 5 },
-      normal: { size: 8, words: 8, timeBonus: 3 },
-      hard: { size: 10, words: 10, timeBonus: 2 }
+  status: "active",
+  game: "Caça-Palavras Mágico",
+  version: "2.1.0",
+  timestamp: new Date().toISOString(),
+  author: "PlayJogosGratis.com",
+  
+  config: {
+    maxHints: 3,
+    baseScore: 100,
+    comboMultiplier: 50,
+    validation: "origin_required"
+  },
+  
+  levels: {
+    easy: {
+      size: 6,
+      words: 6,
+      timeBonus: 5,
+      description: "Fácil para iniciantes"
     },
-    themes: [
-      { 
-        id: 0,
-        name: "ESCOLA 📚", 
-        words: ["LIVRO", "LAPIS", "CADERNO", "ESCOLA", "AULA", "MESA", "QUADRO", "ALUNO", "PROVA", "CANETA", "BORRACHA", "REGUA"] 
-      },
-      { 
-        id: 1,
-        name: "ANIMAIS 🦁", 
-        words: ["GATO", "CACHORRO", "LEAO", "TIGRE", "URSO", "COELHO", "PATO", "ZEBRA", "ELEFANTE", "GIRAFA", "MACACO", "CORUJA"] 
-      },
-      { 
-        id: 2,
-        name: "FRUTAS 🍎", 
-        words: ["MACA", "BANANA", "UVA", "LARANJA", "MANGA", "PERA", "MELAO", "ABACAXI", "MORANGO", "LIMÃO", "KIWI", "MELANCIA"] 
-      },
-      { 
-        id: 3,
-        name: "VEÍCULOS 🚗", 
-        words: ["CARRO", "MOTO", "AVIAO", "NAVIO", "TREM", "ONIBUS", "BIKE", "BARCO", "CAMINHAO", "TAXI", "HELICOPTERO", "SUBWAY"] 
-      },
-      { 
-        id: 4,
-        name: "CORES 🎨", 
-        words: ["AZUL", "VERDE", "AMARELO", "ROXO", "ROSA", "BRANCO", "PRETO", "LARANJA", "VERMELHO", "CINZA", "MARROM", "DOURADO"] 
-      }
-    ],
-    settings: {
-      maxHints: 3,
-      comboMultiplier: 50,
-      baseScorePerLetter: 10,
-      validationKey: "wp_2024_secure"
+    normal: {
+      size: 8,
+      words: 8,
+      timeBonus: 3,
+      description: "Desafio normal"
+    },
+    hard: {
+      size: 10,
+      words: 10,
+      timeBonus: 2,
+      description: "Difícil para experts"
     }
   },
-  functions: {
-    generateGrid: "Função para gerar grade do jogo",
-    validateWord: "Função para validar palavra selecionada",
-    calculateScore: "Função para calcular pontuação"
+  
+  themes: [
+    {
+      id: 0,
+      name: "ESCOLA 📚",
+      icon: "📚",
+      color: "#4CAF50",
+      words: ["LIVRO", "LAPIS", "CADERNO", "ESCOLA", "AULA", "MESA", "QUADRO", "ALUNO", "PROVA", "CANETA", "BORRACHA", "REGUA"]
+    },
+    {
+      id: 1,
+      name: "ANIMAIS 🦁",
+      icon: "🦁",
+      color: "#FF9800",
+      words: ["GATO", "CACHORRO", "LEAO", "TIGRE", "URSO", "COELHO", "PATO", "ZEBRA", "ELEFANTE", "GIRAFA", "MACACO", "CORUJA"]
+    },
+    {
+      id: 2,
+      name: "FRUTAS 🍎",
+      icon: "🍎",
+      color: "#F44336",
+      words: ["MACA", "BANANA", "UVA", "LARANJA", "MANGA", "PERA", "MELAO", "ABACAXI", "MORANGO", "LIMÃO", "KIWI", "MELANCIA"]
+    },
+    {
+      id: 3,
+      name: "VEÍCULOS 🚗",
+      icon: "🚗",
+      color: "#2196F3",
+      words: ["CARRO", "MOTO", "AVIAO", "NAVIO", "TREM", "ONIBUS", "BIKE", "BARCO", "CAMINHAO", "TAXI", "HELICOPTERO", "SUBWAY"]
+    },
+    {
+      id: 4,
+      name: "CORES 🎨",
+      icon: "🎨",
+      color: "#9C27B0",
+      words: ["AZUL", "VERDE", "AMARELO", "ROXO", "ROSA", "BRANCO", "PRETO", "LARANJA", "VERMELHO", "CINZA", "MARROM", "DOURADO"]
+    }
+  ],
+  
+  instructions: {
+    pt: [
+      "1. Escolha um tema e nível de dificuldade",
+      "2. Encontre as palavras na grade",
+      "3. Clique e arraste para selecionar palavras",
+      "4. Ganhe pontos e tente combos!"
+    ],
+    en: [
+      "1. Choose a theme and difficulty level",
+      "2. Find words in the grid",
+      "3. Click and drag to select words",
+      "4. Earn points and try combos!"
+    ]
   }
 };
 
-// Função de verificação de domínio com mais robustez
-function getDomainFromRequest(request) {
-  try {
-    // Tenta pegar do Origin header (para requisições CORS)
-    const origin = request.headers.get('origin');
-    if (origin) {
-      const url = new URL(origin);
-      return url.hostname;
-    }
-    
-    // Tenta pegar do Referer header
-    const referer = request.headers.get('referer');
-    if (referer) {
-      const url = new URL(referer);
-      return url.hostname;
-    }
-    
-    // Tenta pegar do Host header (para requisições diretas)
-    const host = request.headers.get('host');
-    if (host) {
-      return host.split(':')[0];
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Erro ao extrair domínio:', error);
-    return null;
-  }
-}
-
-// Verifica se o domínio é permitido
-function isDomainAllowed(domain) {
-  if (!domain) return false;
+// Função para verificar origem
+function isOriginAllowed(origin) {
+  if (!origin) return false;
   
-  // Permite localhost em desenvolvimento
-  if (process.env.NODE_ENV === 'development' && domain.includes('localhost')) {
+  // Permite requisições do mesmo domínio (para testes)
+  if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
     return true;
   }
   
-  // Verifica domínios exatos ou subdomínios
-  return ALLOWED_DOMAINS.some(allowed => {
-    return domain === allowed || 
-           domain.endsWith('.' + allowed) ||
-           (allowed.startsWith('*.') && domain.endsWith(allowed.slice(2)));
-  });
+  return ALLOWED_ORIGINS.some(allowed => 
+    origin === allowed || 
+    origin.startsWith(allowed.replace('https://', 'http://')) ||
+    (allowed.includes('*') && new RegExp(allowed.replace('*', '.*')).test(origin))
+  );
 }
 
-// Função principal
+// Função principal do handler
 export default async function handler(request) {
-  console.log('📡 API do Caça-Palavras chamada');
-  
-  // Método HTTP
+  const url = new URL(request.url);
+  const origin = request.headers.get('origin') || request.headers.get('referer') || '';
   const method = request.method;
   
+  console.log(`🌐 [${new Date().toISOString()}] ${method} ${url.pathname} - Origin: ${origin}`);
+  
+  // Headers CORS dinâmicos
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': isOriginAllowed(origin) ? origin : 'https://playjogosgratis.com',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Max-Age': '86400',
+    'Access-Control-Allow-Credentials': 'true',
+    'Vary': 'Origin'
+  };
+  
+  // Handle preflight OPTIONS request
   if (method === 'OPTIONS') {
-    // Responde a preflight CORS
     return new Response(null, {
-      status: 200,
+      status: 204,
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+        ...corsHeaders,
+        'Content-Length': '0'
       }
     });
   }
   
+  // Verifica se é uma requisição GET
   if (method !== 'GET') {
-    return new Response(JSON.stringify({ 
-      error: true, 
-      message: 'Método não permitido. Use GET.' 
+    return new Response(JSON.stringify({
+      error: true,
+      message: 'Método não permitido. Use GET.'
     }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        ...corsHeaders
+      }
     });
   }
   
-  // Verifica domínio
-  const domain = getDomainFromRequest(request);
-  const isAllowed = isDomainAllowed(domain);
-  
-  console.log(`🌐 Domínio de origem: ${domain || 'desconhecido'}`);
-  console.log(`🔒 Acesso permitido: ${isAllowed}`);
-  
-  // Adiciona informações de domínio aos dados
-  const responseData = {
-    ...GAME_DATA,
-    domainInfo: {
-      requestedFrom: domain,
-      isAllowed: isAllowed,
-      timestamp: new Date().toISOString(),
-      apiVersion: "1.0"
+  try {
+    // Dados da resposta
+    const responseData = {
+      ...GAME_DATA,
+      requestInfo: {
+        origin: origin,
+        allowed: isOriginAllowed(origin),
+        timestamp: new Date().toISOString(),
+        path: url.pathname,
+        query: Object.fromEntries(url.searchParams)
+      }
+    };
+    
+    // Adiciona mensagem de bloqueio se necessário
+    if (!isOriginAllowed(origin) && !origin.includes('localhost')) {
+      responseData.accessBlocked = true;
+      responseData.message = "Este jogo só está disponível em playjogosgratis.com";
+      responseData.redirect = "https://playjogosgratis.com";
+      
+      // Log de acesso não autorizado
+      console.warn(`🚫 Acesso bloqueado de: ${origin}`);
+    } else {
+      console.log(`✅ Acesso permitido de: ${origin}`);
     }
-  };
-  
-  // Se o domínio não for permitido, adiciona mensagem de bloqueio
-  if (!isAllowed) {
-    responseData.accessBlocked = true;
-    responseData.message = "Este jogo só está disponível em playjogosgratis.com";
-    responseData.redirectUrl = "https://playjogosgratis.com";
+    
+    // Retorna os dados JSON
+    return new Response(JSON.stringify(responseData, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600, s-maxage=7200',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        ...corsHeaders
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro na API:', error);
+    
+    return new Response(JSON.stringify({
+      error: true,
+      message: 'Erro interno do servidor',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        ...corsHeaders
+      }
+    });
   }
-  
-  // Cabeçalhos CORS
-  const headers = {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Cache-Control': 'public, max-age=3600',
-    'Vary': 'Origin',
-    'X-Content-Type-Options': 'nosniff',
-    'X-Game-API': 'caça-palavras/2.0'
-  };
-  
-  // Retorna dados JSON
-  return new Response(JSON.stringify(responseData, null, 2), {
-    status: 200,
-    headers: headers
-  });
 }
