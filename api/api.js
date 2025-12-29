@@ -3,13 +3,10 @@ export default async function handler(request, response) {
     // OBTER O DOMÍNIO DE ORIGEM DA REQUISIÇÃO
     const origin = request.headers.get('origin') || request.headers.get('referer') || '';
     
-    // DOMÍNIOS PERMITIDOS (apenas seu domínio oficial)
+    // DOMÍNIOS PERMITIDOS
     const ALLOWED_DOMAINS = [
         'https://playjogosgratis.com',
-        'http://playjogosgratis.com',
-        // Para desenvolvimento local, você pode adicionar:
-        // 'http://localhost:3000',
-        // 'http://localhost:5173',
+        'http://playjogosgratis.com'
     ];
     
     // VERIFICA SE A ORIGEM É PERMITIDA
@@ -19,22 +16,15 @@ export default async function handler(request, response) {
     
     // SE NÃO FOR O DOMÍNIO CORRETO, RETORNA CÓDIGO DE BLOQUEIO
     if (!isOriginAllowed) {
-        console.log(`❌ Acesso bloqueado para: ${origin}`);
+        console.log(`❌ Bloqueado: ${origin}`);
         
         return response.status(200)
             .setHeader('Content-Type', 'application/javascript')
             .send(`
-                // ⚠️ ACESSO NEGADO - JOGO BLOQUEADO ⚠️
+                // ⚠️ ACESSO NEGADO ⚠️
                 console.error("❌ Este jogo só está disponível em: https://playjogosgratis.com");
                 
-                // Substitui toda a página por mensagem de erro
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', blockPage);
-                } else {
-                    blockPage();
-                }
-                
-                function blockPage() {
+                document.addEventListener('DOMContentLoaded', function() {
                     document.body.innerHTML = \`
                         <div style="
                             position: fixed;
@@ -50,7 +40,6 @@ export default async function handler(request, response) {
                             font-family: Arial, sans-serif;
                             text-align: center;
                             padding: 20px;
-                            z-index: 99999;
                         ">
                             <div>
                                 <h1 style="font-size: 2.5em; margin-bottom: 20px;">🎮 Acesso Restrito</h1>
@@ -59,7 +48,8 @@ export default async function handler(request, response) {
                                     <strong style="font-size: 1.5em;">playjogosgratis.com</strong>
                                 </p>
                                 <p style="margin-top: 30px; opacity: 0.8;">
-                                    Acesse o jogo oficial através do link abaixo:
+                                    Se você está acessando do domínio correto,<br>
+                                    verifique se há algum bloqueador de scripts.
                                 </p>
                                 <button onclick="window.location.href='https://playjogosgratis.com/cacapalavras/'" 
                                     style="
@@ -72,36 +62,13 @@ export default async function handler(request, response) {
                                         cursor: pointer;
                                         color: #764ba2;
                                         font-weight: bold;
-                                        transition: transform 0.2s;
-                                    "
-                                    onmouseover="this.style.transform='scale(1.05)'"
-                                    onmouseout="this.style.transform='scale(1)'"
-                                >
+                                    ">
                                     🔗 Ir para o Jogo Oficial
                                 </button>
                             </div>
                         </div>
                     \`;
-                    
-                    // Bloqueia atalhos de desenvolvedor (apenas dificulta, não impede totalmente)
-                    document.addEventListener('keydown', function(e) {
-                        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I') || (e.ctrlKey && e.shiftKey && e.key === 'J') || (e.ctrlKey && e.key === 'U')) {
-                            e.preventDefault();
-                            alert('Acesso ao desenvolvedor bloqueado neste jogo protegido.');
-                            return false;
-                        }
-                    });
-                    
-                    document.addEventListener('contextmenu', function(e) {
-                        e.preventDefault();
-                        alert('Menu de contexto bloqueado.');
-                        return false;
-                    });
-                    
-                    // Tenta bloquear a aba de rede (dificulta inspeção)
-                    Object.defineProperty(document, 'hidden', { value: true });
-                    Object.defineProperty(document, 'visibilityState', { value: 'hidden' });
-                }
+                });
             `);
     }
     
@@ -109,16 +76,13 @@ export default async function handler(request, response) {
     // 🔥 SE FOR O DOMÍNIO CORRETO, ENVIA O JOGO COMPLETO
     // ============================================
     
-    console.log(`✅ Acesso permitido para: ${origin}`);
+    console.log(`✅ Permitido: ${origin}`);
     
-    // CÓDIGO COMPLETO DO JOGO CAÇA-PALAVRAS
-    const gameCode = `
-// ============================================
+    const gameCode = `// ============================================
 // 🌟 CAÇA-PALAVRAS MÁGICO - VERSÃO PROTEGIDA
 // ============================================
-// Carregado dinamicamente da API - ${new Date().toISOString()}
 
-// Configurações do jogo
+// Configurações
 const LEVELS = {
     easy: { size: 6, words: 6, timeBonus: 5 },
     normal: { size: 8, words: 8, timeBonus: 3 },
@@ -128,7 +92,7 @@ const LEVELS = {
 const WORD_SETS = [
     { 
         theme: "ESCOLA 📚", 
-        words: ["LIVRO", "LAPIS", "CADERNO", "ESCOLA", "AULA", "MESA", "QUADRO", "ALUNO", "PROVA", "CANETA", "BORRACHA", "REGUA"] 
+        words: ["LIVRO", "LAPIS", "CADERNO", "ESCOLA", "AULA", "MESA","QUADRO", "ALUNO", "PROVA", "CANETA", "BORRACHA", "REGUA"] 
     },
     { 
         theme: "ANIMAIS 🦁", 
@@ -167,25 +131,35 @@ let hintsRemaining = 3;
 let firstPlay = true;
 let instructionTimeout = null;
 
-// Elementos DOM (serão inicializados quando o DOM estiver pronto)
-let startScreen, gameScreen, endScreen, gridContainer, wordListElement;
-let timerElement, scoreElement, progressFill, comboDisplay, comboCount;
-let hintButton, starsContainer, tutorialOverlay;
+// Elementos DOM
+const startScreen = document.getElementById('start-screen');
+const gameScreen = document.getElementById('game-screen');
+const endScreen = document.getElementById('end-screen');
+const gridContainer = document.getElementById('word-search-grid');
+const wordListElement = document.getElementById('word-list');
+const timerElement = document.getElementById('timer');
+const scoreElement = document.getElementById('score');
+const progressFill = document.getElementById('progress-fill');
+const comboDisplay = document.getElementById('combo-display');
+const comboCount = document.getElementById('combo-count');
+const hintButton = document.getElementById('hint-button');
+const starsContainer = document.getElementById('stars-container');
+const tutorialOverlay = document.getElementById('tutorial-overlay');
 
 // =======================================================
 // FUNÇÕES DE TUTORIAL
 // =======================================================
 
 function showTutorial() {
-    if (tutorialOverlay) tutorialOverlay.classList.remove('hidden');
+    tutorialOverlay.classList.remove('hidden');
 }
 
 function closeTutorial() {
-    if (tutorialOverlay) tutorialOverlay.classList.add('hidden');
+    tutorialOverlay.classList.add('hidden');
 }
 
 function skipTutorial() {
-    closeTutorial();
+    tutorialOverlay.classList.add('hidden');
     firstPlay = false;
 }
 
@@ -195,8 +169,6 @@ function skipTutorial() {
 
 function createParticles() {
     const particles = document.getElementById('particles');
-    if (!particles) return;
-    
     particles.innerHTML = '';
     const emojis = ['⭐', '🌟', '✨', '💫', '🎨', '🎪', '🎭', '🎨'];
     
@@ -213,8 +185,6 @@ function createParticles() {
 }
 
 function updateStars() {
-    if (!starsContainer) return;
-    
     const stars = starsContainer.querySelectorAll('.star');
     const wordsFound = foundWords.length;
     const totalWords = currentWords.length;
@@ -314,8 +284,6 @@ function canPlaceWord(word, row, col, dir) {
 }
 
 function renderGrid() {
-    if (!gridContainer) return;
-    
     gridContainer.innerHTML = '';
     gridContainer.style.gridTemplateColumns = \`repeat(\${size}, 1fr)\`;
     
@@ -339,8 +307,6 @@ function renderGrid() {
 }
 
 function renderWordList() {
-    if (!wordListElement) return;
-    
     wordListElement.innerHTML = '';
     currentWords.forEach(word => {
         const li = document.createElement('li');
@@ -353,13 +319,10 @@ function renderWordList() {
     });
     
     const themeName = WORD_SETS[currentTheme].theme;
-    const sidebarTitle = document.querySelector('#sidebar h3');
-    if (sidebarTitle) sidebarTitle.textContent = \`🔎 \${themeName}\`;
+    document.querySelector('#sidebar h3').textContent = \`🔎 \${themeName}\`;
 }
 
 function updateProgress() {
-    if (!progressFill) return;
-    
     const percentage = (foundWords.length / currentWords.length) * 100;
     progressFill.style.width = percentage + '%';
     progressFill.textContent = Math.round(percentage) + '%';
@@ -374,11 +337,9 @@ function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         secondsElapsed++;
-        if (timerElement) {
-            const minutes = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
-            const seconds = String(secondsElapsed % 60).padStart(2, '0');
-            timerElement.innerHTML = \`⏰ \${minutes}:\${seconds}\`;
-        }
+        const minutes = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+        const seconds = String(secondsElapsed % 60).padStart(2, '0');
+        timerElement.innerHTML = \`⏰ \${minutes}:\${seconds}\`;
     }, 1000);
 }
 
@@ -388,50 +349,14 @@ function stopTimer() {
 
 function calculateScore(wordLength) {
     const baseScore = wordLength * 10;
-    const timeBonus = currentLevel ? currentLevel.timeBonus * Math.max(0, 180 - secondsElapsed) : 0;
+    const timeBonus = currentLevel.timeBonus * Math.max(0, 180 - secondsElapsed);
     const comboBonus = combo * 50;
     return baseScore + timeBonus + comboBonus;
 }
 
 function updateScore(points) {
     score += points;
-    if (scoreElement) scoreElement.textContent = score;
-}
-
-// =======================================================
-// SISTEMA DE DICAS
-// =======================================================
-
-function useHint() {
-    if (hintsRemaining <= 0 || !hintButton) return;
-    
-    const remainingWords = currentWords.filter(w => !foundWords.includes(w));
-    if (remainingWords.length === 0) return;
-    
-    const targetWord = remainingWords[0];
-    const wordData = wordPositions.find(wp => wp.word === targetWord);
-    
-    if (wordData) {
-        hintsRemaining--;
-        if (hintButton) {
-            hintButton.textContent = \`💡 Usar Dica (\${hintsRemaining})\`;
-            if (hintsRemaining === 0) hintButton.disabled = true;
-        }
-        
-        // Destaca as duas primeiras letras
-        wordData.positions.slice(0, 2).forEach((pos, index) => {
-            const cell = document.querySelector(
-                \`.grid-cell[data-row="\${pos.row}"][data-col="\${pos.col}"]\`
-            );
-            
-            if (cell) {
-                setTimeout(() => {
-                    cell.classList.add('hint');
-                    setTimeout(() => cell.classList.remove('hint'), 2000);
-                }, index * 300);
-            }
-        });
-    }
+    scoreElement.textContent = score;
 }
 
 // =======================================================
@@ -540,7 +465,6 @@ function handleEnd(event) {
     }
     
     if (matchedWord) {
-        // ACERTO!
         foundWords.push(matchedWord);
         combo++;
         
@@ -556,9 +480,7 @@ function handleEnd(event) {
         renderWordList();
         checkWin();
     } else {
-        // ERRO!
         combo = 0;
-        
         selectedCells.forEach(cell => {
             cell.element.classList.remove('selected');
             cell.element.classList.add('error');
@@ -616,15 +538,10 @@ function startGame(level) {
     updateProgress();
     startTimer();
     
-    if (scoreElement) scoreElement.textContent = '0';
-    if (hintButton) {
-        hintButton.textContent = '💡 Usar Dica (3)';
-        hintButton.disabled = false;
-    }
-    
-    if (starsContainer) {
-        starsContainer.querySelectorAll('.star').forEach(s => s.classList.remove('earned'));
-    }
+    scoreElement.textContent = '0';
+    hintButton.textContent = '💡 Usar Dica (3)';
+    hintButton.disabled = false;
+    starsContainer.querySelectorAll('.star').forEach(s => s.classList.remove('earned'));
     
     showScreen('game-screen');
 }
@@ -633,32 +550,10 @@ function checkWin() {
     if (foundWords.length === currentWords.length) {
         stopTimer();
         
-        // Cria confetes (simulação simples)
-        for (let i = 0; i < 50; i++) {
-            setTimeout(() => {
-                const confetti = document.createElement('div');
-                confetti.style.position = 'fixed';
-                confetti.style.left = Math.random() * 100 + '%';
-                confetti.style.top = '-10px';
-                confetti.style.width = '10px';
-                confetti.style.height = '10px';
-                confetti.style.background = ['#FFD700', '#FF69B4', '#87CEEB', '#7CFC00', '#FFA500', '#9370DB'][Math.floor(Math.random() * 6)];
-                confetti.style.borderRadius = '50%';
-                confetti.style.zIndex = '999';
-                confetti.style.animation = 'confettiFall 3s linear';
-                document.body.appendChild(confetti);
-                
-                setTimeout(() => confetti.remove(), 3000);
-            }, i * 30);
-        }
-        
         setTimeout(() => {
             showScreen('end-screen');
-            const finalTime = document.getElementById('final-time');
-            const finalScore = document.getElementById('final-score');
-            
-            if (finalTime) finalTime.textContent = formatTime(secondsElapsed);
-            if (finalScore) finalScore.textContent = score;
+            document.getElementById('final-time').textContent = formatTime(secondsElapsed);
+            document.getElementById('final-score').textContent = score;
             
             const starsFinal = document.querySelectorAll('#stars-final .star');
             starsFinal.forEach((star, index) => {
@@ -674,14 +569,8 @@ function resetGame() {
 }
 
 function showScreen(screenId) {
-    const screens = ['start-screen', 'game-screen', 'end-screen'];
-    screens.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
-    });
-    
-    const targetScreen = document.getElementById(screenId);
-    if (targetScreen) targetScreen.classList.remove('hidden');
+    [startScreen, gameScreen, endScreen].forEach(el => el.classList.add('hidden'));
+    document.getElementById(screenId).classList.remove('hidden');
 }
 
 function formatTime(totalSeconds) {
@@ -691,111 +580,65 @@ function formatTime(totalSeconds) {
 }
 
 // =======================================================
-// INICIALIZAÇÃO DO JOGO
+// EVENT LISTENERS
 // =======================================================
 
-function initGame() {
-    console.log('🎮 Inicializando Caça-Palavras Mágico...');
-    
-    // Inicializar referências aos elementos DOM
-    startScreen = document.getElementById('start-screen');
-    gameScreen = document.getElementById('game-screen');
-    endScreen = document.getElementById('end-screen');
-    gridContainer = document.getElementById('word-search-grid');
-    wordListElement = document.getElementById('word-list');
-    timerElement = document.getElementById('timer');
-    scoreElement = document.getElementById('score');
-    progressFill = document.getElementById('progress-fill');
-    comboDisplay = document.getElementById('combo-display');
-    comboCount = document.getElementById('combo-count');
-    hintButton = document.getElementById('hint-button');
-    starsContainer = document.getElementById('stars-container');
-    tutorialOverlay = document.getElementById('tutorial-overlay');
-    
-    // Configurar event listeners
-    if (gridContainer) {
-        gridContainer.addEventListener('mousedown', handleStart);
-        gridContainer.addEventListener('touchstart', handleStart, { passive: false });
-    }
-    
-    document.addEventListener('mousemove', handleMove);
-    document.addEventListener('mouseup', handleEnd);
-    document.addEventListener('touchmove', handleMove, { passive: false });
-    document.addEventListener('touchend', handleEnd, { passive: false });
-    
-    // Botões de tema
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('selected'));
-            this.classList.add('selected');
-            currentTheme = parseInt(this.dataset.theme);
-        });
+// Seleção de tema
+document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('selected'));
+        this.classList.add('selected');
+        currentTheme = parseInt(this.dataset.theme);
     });
-    
-    // Botões de nível
-    document.querySelectorAll('[data-level]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            startGame(this.dataset.level);
-        });
+});
+
+// Seleção de nível
+document.querySelectorAll('[data-level]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const level = this.dataset.level;
+        startGame(level);
     });
-    
-    // Botão de dica
-    if (hintButton) {
-        hintButton.addEventListener('click', useHint);
-    }
-    
-    // Botão de reset
-    const resetButton = document.getElementById('reset-button');
-    if (resetButton) {
-        resetButton.addEventListener('click', () => {
-            if (confirm('Tem certeza que deseja reiniciar o jogo?')) {
-                resetGame();
-            }
-        });
-    }
-    
-    // Botão de jogar novamente
-    const playAgainButton = document.getElementById('play-again-button');
-    if (playAgainButton) {
-        playAgainButton.addEventListener('click', resetGame);
-    }
-    
-    // Criar partículas
-    createParticles();
-    
-    // Mostrar tela inicial
-    showScreen('start-screen');
-    
-    // Verificar se é a primeira vez para mostrar tutorial
-    if (firstPlay) {
-        setTimeout(() => {
-            showTutorial();
-        }, 1000);
-    }
-    
-    console.log('✅ Jogo inicializado com sucesso!');
-}
+});
 
-// Inicializar quando o DOM estiver pronto
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initGame);
-} else {
-    initGame();
-}
+// Eventos da grade
+gridContainer.addEventListener('mousedown', handleStart);
+document.addEventListener('mousemove', handleMove);
+document.addEventListener('mouseup', handleEnd);
 
-// Ajustar tamanho da grade ao redimensionar janela
+// Eventos touch
+gridContainer.addEventListener('touchstart', handleStart, { passive: false });
+document.addEventListener('touchmove', handleMove, { passive: false });
+document.addEventListener('touchend', handleEnd, { passive: false });
+
+// Botões
+hintButton.addEventListener('click', () => {
+    useHint();
+});
+
+document.getElementById('reset-button').addEventListener('click', () => {
+    if (confirm('Tem certeza que deseja reiniciar o jogo?')) {
+        resetGame();
+    }
+});
+
+document.getElementById('play-again-button').addEventListener('click', () => {
+    resetGame();
+});
+
+// =======================================================
+// INICIALIZAÇÃO
+// =======================================================
+
+createParticles();
+showScreen('start-screen');
+
+// Ajusta tamanho da grade ao redimensionar
 window.addEventListener('resize', () => {
     if (gameGrid.length > 0) {
         renderGrid();
     }
-});
+});`;
 
-// Exportar funções globais para acesso pelo HTML
-window.showTutorial = showTutorial;
-window.closeTutorial = closeTutorial;
-window.showScreen = showScreen;
-`;
-    
     // Retorna o código do jogo
     return response.status(200)
         .setHeader('Content-Type', 'application/javascript')
