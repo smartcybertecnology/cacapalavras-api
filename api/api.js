@@ -1,392 +1,347 @@
-const ALLOWED_ORIGIN = 'https://playjogosgratis.com';
+// api.js - API para o jogo de caça-palavras
+// Hospedado em: https://cacapalavras-api.vercel.app/api/api.js
 
-const THEMES = {
+// Dados das palavras por tema
+const temas = {
     escola: {
-        label: 'Escola',
-        words: {
-            facil: ['LAPIS', 'LIVRO', 'MESA', 'LOUSA', 'GIZ'],
-            normal: ['CADERNO', 'MOCHILA', 'ESTOJO', 'BORRACHA', 'REGUA', 'TESOURA'],
-            dificil: ['PROFESSOR', 'BIBLIOTECA', 'EDUCACAO', 'ALFABETO', 'CALENDARIO', 'MATEMATICA', 'GEOGRAFIA']
-        }
+        palavras: ["LIVRO", "CANETA", "CADERNO", "PROFESSOR", "SALA", "ALUNO", "QUADRO", "MOCHILA"],
+        descricao: "Objetos da escola"
     },
     animais: {
-        label: 'Animais',
-        words: {
-            facil: ['GATO', 'CAO', 'PATO', 'URSO', 'SAPO'],
-            normal: ['CAVALO', 'COELHO', 'TIGRE', 'MACACO', 'GIRAFA', 'ZEBRA'],
-            dificil: ['ELEFANTE', 'RINOCERONTE', 'PAPAGAIO', 'TARTARUGA', 'BORBOLETA', 'CROCODILO', 'PINGUIM']
-        }
+        palavras: ["CACHORRO", "GATO", "ELEFANTE", "LEAO", "GIRAFA", "TIGRE", "ZEBRA", "MACACO"],
+        descricao: "Animais diversos"
     },
     frutas: {
-        label: 'Frutas',
-        words: {
-            facil: ['UVA', 'PERA', 'MACA', 'KIWI', 'LIMA'],
-            normal: ['BANANA', 'LARANJA', 'MORANGO', 'ABACAXI', 'MELANCIA', 'MANGA'],
-            dificil: ['FRAMBOESA', 'TANGERINA', 'MARACUJA', 'JABUTICABA', 'CARAMBOLA', 'PITANGA', 'ACEROLA']
-        }
+        palavras: ["BANANA", "MACA", "LARANJA", "UVA", "MORANGO", "ABACAXI", "PERA", "MELANCIA"],
+        descricao: "Frutas deliciosas"
     },
     veiculos: {
-        label: 'Veículos',
-        words: {
-            facil: ['CARRO', 'MOTO', 'NAVIO', 'AVIAO', 'TREM'],
-            normal: ['ONIBUS', 'CAMINHAO', 'BICICLETA', 'HELICOPTERO', 'BARCO', 'METRO'],
-            dificil: ['AMBULANCIA', 'MOTOCICLETA', 'ESCAVADEIRA', 'SUBMARINO', 'TELEFÉRICO', 'FOGUETE', 'MONORAIL']
-        }
+        palavras: ["CARRO", "MOTO", "ONIBUS", "AVIAO", "NAVIO", "BICICLETA", "CAMINHAO", "TRATOR"],
+        descricao: "Meios de transporte"
     },
     cores: {
-        label: 'Cores',
-        words: {
-            facil: ['AZUL', 'ROSA', 'ROXO', 'VERDE', 'CINZA'],
-            normal: ['AMARELO', 'VERMELHO', 'LARANJA', 'MARROM', 'BRANCO', 'PRETO'],
-            dificil: ['TURQUESA', 'VIOLETA', 'MAGENTA', 'DOURADO', 'PRATEADO', 'BEGE', 'CORAL']
-        }
+        palavras: ["AZUL", "VERMELHO", "VERDE", "AMARELO", "ROSA", "ROXO", "LARANJA", "PRETO"],
+        descricao: "Cores diversas"
     }
 };
 
-const DIFFICULTY_CONFIG = {
-    facil: { gridSize: 8, timeLimit: 300, basePoints: 10 },
-    normal: { gridSize: 10, timeLimit: 240, basePoints: 20 },
-    dificil: { gridSize: 12, timeLimit: 180, basePoints: 30 }
+// Configurações de dificuldade
+const dificuldades = {
+    facil: {
+        tamanho: 10,
+        tempoLimite: 300, // 5 minutos
+        pontuacaoBase: 10
+    },
+    normal: {
+        tamanho: 15,
+        tempoLimite: 450, // 7.5 minutos
+        pontuacaoBase: 15
+    },
+    dificil: {
+        tamanho: 20,
+        tempoLimite: 600, // 10 minutos
+        pontuacaoBase: 20
+    }
 };
 
-const DIRECTIONS = [
-    [0, 1],   // horizontal direita
-    [1, 0],   // vertical baixo
-    [1, 1],   // diagonal direita-baixo
-    [-1, 1],  // diagonal direita-cima
-    [0, -1],  // horizontal esquerda
-    [-1, 0],  // vertical cima
-    [-1, -1], // diagonal esquerda-cima
-    [1, -1]   // diagonal esquerda-baixo
-];
-
-const gameSessions = new Map();
-
-function generateGrid(words, gridSize) {
-    const grid = Array(gridSize).fill().map(() => Array(gridSize).fill(''));
-    const wordPositions = new Map();
-
-    words.forEach(word => {
-        let placed = false;
-        let attempts = 0;
-        const maxAttempts = 100;
-
-        while (!placed && attempts < maxAttempts) {
-            const direction = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
-            const startRow = Math.floor(Math.random() * gridSize);
-            const startCol = Math.floor(Math.random() * gridSize);
-
-            if (canPlaceWord(grid, word, startRow, startCol, direction, gridSize)) {placeWord(grid, word, startRow, startCol, direction);
+// Função para gerar grade de letras
+function gerarGrade(palavras, tamanho) {
+    // Inicializar grade vazia
+    const grade = Array(tamanho).fill().map(() => Array(tamanho).fill(''));
+    const direcoes = [
+        [0, 1],   // horizontal →
+        [1, 0],   // vertical ↓
+        [1, 1],   // diagonal ↘
+        [1, -1]   // diagonal ↙
+    ];
+    
+    const posicoesPalavras = [];
+    
+    // Colocar palavras na grade
+    palavras.forEach(palavra => {
+        let colocada = false;
+        let tentativas = 0;
+        
+        while (!colocada && tentativas < 100) {
+            tentativas++;
+            
+            // Escolher direção aleatória
+            const dir = direcoes[Math.floor(Math.random() * direcoes.length)];
+            const dirX = dir[0];
+            const dirY = dir[1];
+            
+            // Calcular posição inicial possível
+            const startX = dirX > 0 ? 
+                Math.floor(Math.random() * (tamanho - palavra.length * dirX)) :
+                Math.floor(Math.random() * tamanho);
                 
-                const positions = [];
-                for (let i = 0; i < word.length; i++) {
-                    positions.push({
-                        row: startRow + direction[0] * i,
-                        col: startCol + direction[1] * i
-                    });
+            const startY = dirY > 0 ? 
+                Math.floor(Math.random() * (tamanho - palavra.length * Math.abs(dirY))) :
+                (dirY < 0 ? 
+                    Math.floor(Math.random() * (tamanho - palavra.length * Math.abs(dirY))) + palavra.length - 1 :
+                    Math.floor(Math.random() * tamanho));
+            
+            // Verificar se a posição está livre
+            let podeColocar = true;
+            const posicoes = [];
+            
+            for (let i = 0; i < palavra.length; i++) {
+                const x = startX + i * dirX;
+                const y = startY + i * dirY;
+                
+                if (x >= 0 && x < tamanho && y >= 0 && y < tamanho) {
+                    if (grade[x][y] !== '' && grade[x][y] !== palavra[i]) {
+                        podeColocar = false;
+                        break;
+                    }
+                    posicoes.push({x, y, letra: palavra[i]});
+                } else {
+                    podeColocar = false;
+                    break;
                 }
-                wordPositions.set(word, positions);
-                placed = true;
             }
-            attempts++;
+            
+            // Colocar palavra se possível
+            if (podeColocar) {
+                posicoes.forEach(pos => {
+                    grade[pos.x][pos.y] = pos.letra;
+                });
+                
+                posicoesPalavras.push({
+                    palavra: palavra,
+                    posicoes: posicoes.map(p => ({x: p.x, y: p.y})),
+                    direcao: dir
+                });
+                
+                colocada = true;
+            }
         }
     });
-
-    // Preencher células vazias com letras aleatórias
-    for (let i = 0; i < gridSize; i++) {
-        for (let j = 0; j < gridSize; j++) {
-            if (grid[i][j] === '') {
-                grid[i][j] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    
+    // Preencher espaços vazios com letras aleatórias
+    const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (let i = 0; i < tamanho; i++) {
+        for (let j = 0; j < tamanho; j++) {
+            if (grade[i][j] === '') {
+                grade[i][j] = letras[Math.floor(Math.random() * letras.length)];
             }
         }
     }
-
-    return { grid, wordPositions };
-}
-
-function canPlaceWord(grid, word, row, col, direction, gridSize) {
-    for (let i = 0; i < word.length; i++) {
-        const newRow = row + direction[0] * i;
-        const newCol = col + direction[1] * i;
-
-        if (newRow < 0 || newRow >= gridSize || newCol < 0 || newCol >= gridSize) {
-            return false;
-        }
-
-        if (grid[newRow][newCol] !== '' && grid[newRow][newCol] !== word[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-function placeWord(grid, word, row, col, direction) {
-    for (let i = 0; i < word.length; i++) {
-        const newRow = row + direction[0] * i;
-        const newCol = col + direction[1] * i;
-        grid[newRow][newCol] = word[i];
-    }
-}
-
-function validateWord(word, cells, wordPositions) {
-    if (!wordPositions.has(word)) {
-        return false;
-    }
-
-    const correctPositions = wordPositions.get(word);
     
-    if (cells.length !== correctPositions.length) {
-        return false;
-    }
+    return { grade, posicoesPalavras };
+}
 
-    // Verificar se as células selecionadas correspondem às posições corretas
-    for (let i = 0; i < cells.length; i++) {
-        const match = correctPositions.some(pos => 
-            pos.row === cells[i].row && pos.col === cells[i].col
-        );
-        if (!match) {
-            return false;
-        }
-    }
-
-    // Verificar se as células estão em sequência (adjacentes)
-    for (let i = 0; i < cells.length - 1; i++) {
-        const rowDiff = Math.abs(cells[i + 1].row - cells[i].row);
-        const colDiff = Math.abs(cells[i + 1].col - cells[i].col);
+// Função para validar seleção do jogador
+function validarSelecao(grade, posicoesSelecionadas, posicoesPalavras) {
+    // Converter posições selecionadas para array de coordenadas
+    const coordenadas = posicoesSelecionadas.map(p => ({x: p[0], y: p[1]}));
+    
+    // Verificar se forma uma linha reta
+    const dx = coordenadas[1]?.x - coordenadas[0]?.x;
+    const dy = coordenadas[1]?.y - coordenadas[0]?.y;
+    
+    if (!dx && !dy) return null;
+    
+    // Verificar se todas estão alinhadas
+    for (let i = 2; i < coordenadas.length; i++) {
+        const dxi = coordenadas[i].x - coordenadas[i-1].x;
+        const dyi = coordenadas[i].y - coordenadas[i-1].y;
         
-        if (rowDiff > 1 || colDiff > 1 || (rowDiff === 0 && colDiff === 0)) {
-            return false;
+        if (dxi !== dx || dyi !== dy) {
+            return null;
         }
     }
-
-    return true;
-}
-
-function calculatePoints(word, difficulty, hintsUsed) {
-    const basePoints = DIFFICULTY_CONFIG[difficulty].basePoints;
-    const lengthBonus = word.length * 5;
-    const hintPenalty = hintsUsed * 10;
     
-    return Math.max(0, basePoints + lengthBonus - hintPenalty);
+    // Normalizar direção para frente ou trás
+    const dir = dx === 0 ? [0, dy > 0 ? 1 : -1] : 
+                dy === 0 ? [dx > 0 ? 1 : -1, 0] :
+                [dx > 0 ? 1 : -1, dy > 0 ? 1 : -1];
+    
+    // Formar palavra
+    let palavra = '';
+    coordenadas.forEach(pos => {
+        palavra += grade[pos.x][pos.y];
+    });
+    
+    // Verificar se a palavra existe na lista
+    for (const dados of posicoesPalavras) {
+        if (dados.palavra === palavra || dados.palavra === palavra.split('').reverse().join('')) {
+            // Verificar se as posições correspondem
+            const posicoesPalavra = dados.posicoes;
+            const encontrou = posicoesPalavra.every((pos, idx) => 
+                pos.x === coordenadas[idx].x && pos.y === coordenadas[idx].y
+            ) || posicoesPalavra.every((pos, idx) => 
+                pos.x === coordenadas[coordenadas.length - 1 - idx].x && 
+                pos.y === coordenadas[coordenadas.length - 1 - idx].y
+            );
+            
+            if (encontrou) {
+                return {
+                    palavra: dados.palavra,
+                    encontrada: true,
+                    pontuacao: dados.palavra.length * 10
+                };
+            }
+        }
+    }
+    
+    return null;
 }
 
+// Handler principal da API
 module.exports = async (req, res) => {
-    // Configurar CORS
-    const origin = req.headers.origin;
+    // Configuração de CORS - Permitir apenas o domínio específico
+    const allowedOrigin = 'https://playjogosgratis.com';
     
-    // Permitir apenas o domínio específico
-    if (origin && origin.startsWith(ALLOWED_ORIGIN)) {
+    // Verificar origem da requisição
+    const origin = req.headers.origin;
+    if (origin && origin === allowedOrigin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     } else {
-        res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+        // Bloquear outras origens
+        return res.status(403).json({ 
+            error: 'Acesso não autorizado. Este recurso está disponível apenas para https://playjogosgratis.com' 
+        });
     }
     
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    // Configurar outros headers CORS
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    res.setHeader('Access-Control-Max-Age', '86400');
-
-    // Responder ao preflight OPTIONS
+    res.setHeader('Access-Control-Max-Age', '86400'); // 24 horas
+    
+    // Lidar com requisição OPTIONS (preflight)
     if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+        return res.status(200).end();
     }
-
-    // Apenas POST é permitido
-    if (req.method !== 'POST') {
-        res.status(405).json({ 
-            success: false, 
-            error: 'Método não permitido' 
-        });
-        return;
-    }
-
-    // Verificar origem
-    if (!origin || !origin.startsWith(ALLOWED_ORIGIN)) {
-        res.status(403).json({ 
-            success: false, 
-            error: 'Acesso negado' 
-        });
-        return;
-    }
-
-    try {
-        const action = req.query.action;
-
-        switch (action) {
-            case 'themes':
-                return handleThemes(req, res);
-            
-            case 'generate':
-                return handleGenerate(req, res);
-            
-            case 'validate':
-                return handleValidate(req, res);
-            
-            case 'hint':
-                return handleHint(req, res);
-            
-            default:
-                res.status(400).json({ 
-                    success: false, 
-                    error: 'Ação inválida' 
-                });
-        }
-    } catch (error) {
-        console.error('API Error:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Erro interno do servidor' 
-        });
-    }
-};
-
-function handleThemes(req, res) {
-    const themes = Object.keys(THEMES).map(key => ({
-        id: key,
-        label: THEMES[key].label
-    }));
-
-    res.status(200).json({
-        success: true,
-        themes
-    });
-}
-
-function handleGenerate(req, res) {
-    const { theme, difficulty } = req.body;
-
-    if (!theme || !difficulty) {
-        res.status(400).json({ 
-            success: false, 
-            error: 'Tema e dificuldade são obrigatórios' 
-        });
-        return;
-    }
-
-    if (!THEMES[theme]) {
-        res.status(400).json({ 
-            success: false, 
-            error: 'Tema inválido' 
-        });
-        return;
-    }
-
-    if (!DIFFICULTY_CONFIG[difficulty]) {
-        res.status(400).json({ 
-            success: false, 
-            error: 'Dificuldade inválida' 
-        });
-        return;
-    }
-
-    const words = THEMES[theme].words[difficulty];
-    const config = DIFFICULTY_CONFIG[difficulty];
-    const { grid, wordPositions } = generateGrid(words, config.gridSize);
-
-    // Criar sessão de jogo
-    const gameId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    gameSessions.set(gameId, {
-        theme,
-        difficulty,
-        wordPositions,
-        words,
-        createdAt: Date.now(),
-        hintsUsed: 0
-    });
-
-    // Limpar sessões antigas (mais de 1 hora)
-    const oneHourAgo = Date.now() - 3600000;
-    for (const [key, session] of gameSessions.entries()) {
-        if (session.createdAt < oneHourAgo) {
-            gameSessions.delete(key);
-        }
-    }
-
-    res.status(200).json({
-        success: true,
-        gameId,
-        grid,
-        words,
-        timeLimit: config.timeLimit,
-        difficulty
-    });
-}
-
-function handleValidate(req, res) {
-    const { word, cells, gameId } = req.body;
-
-    if (!word || !cells || !gameId) {
-        res.status(400).json({ 
-            success: false, 
-            error: 'Dados incompletos' 
-        });
-        return;
-    }
-
-    const session = gameSessions.get(gameId);
     
-    if (!session) {
-        res.status(400).json({ 
-            success: false, 
-            error: 'Sessão inválida' 
-        });
-        return;
-    }
-
-    const isValid = validateWord(word, cells, session.wordPositions);
-
-    if (isValid) {
-        const points = calculatePoints(word, session.difficulty, session.hintsUsed);
+    // Endpoints da API
+    if (req.method === 'GET') {
+        // Endpoint para obter lista de temas
+        if (req.query.acao === 'temas') {
+            const listaTemas = Object.keys(temas).map(tema => ({
+                id: tema,
+                nome: tema.charAt(0).toUpperCase() + tema.slice(1),
+                descricao: temas[tema].descricao,
+                quantidade: temas[tema].palavras.length
+            }));
+            
+            return res.status(200).json({
+                temas: listaTemas,
+                dificuldades: Object.keys(dificuldades).map(d => ({
+                    id: d,
+                    nome: d.charAt(0).toUpperCase() + d.slice(1),
+                    ...dificuldades[d]
+                }))
+            });
+        }
         
-        res.status(200).json({
-            success: true,
-            valid: true,
-            points,
-            word
-        });
-    } else {
-        res.status(200).json({
-            success: true,
-            valid: false,
-            points: 0
-        });
+        // Endpoint para iniciar novo jogo
+        if (req.query.acao === 'novo-jogo') {
+            const { tema, dificuldade } = req.query;
+            
+            if (!tema || !temas[tema]) {
+                return res.status(400).json({ error: 'Tema inválido' });
+            }
+            
+            if (!dificuldade || !dificuldades[dificuldade]) {
+                return res.status(400).json({ error: 'Dificuldade inválida' });
+            }
+            
+            const palavras = temas[tema].palavras;
+            const tamanho = dificuldades[dificuldade].tamanho;
+            const tempoLimite = dificuldades[dificuldade].tempoLimite;
+            const pontuacaoBase = dificuldades[dificuldade].pontuacaoBase;
+            
+            const { grade, posicoesPalavras } = gerarGrade(palavras, tamanho);
+            
+            // Gerar ID único para o jogo
+            const jogoId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+            
+            return res.status(200).json({
+                jogoId,
+                tema,
+                dificuldade,
+                grade,
+                palavras: palavras.sort(() => Math.random() - 0.5),
+                palavrasEncontradas: [],
+                tempoLimite,
+                tempoInicio: Date.now(),
+                pontuacao: 0,
+                pontuacaoBase,
+                dicasDisponiveis: 3,
+                tamanhoGrade: tamanho
+            });
+        }
+        
+        // Endpoint para obter dica
+        if (req.query.acao === 'dica') {
+            const { jogoId, palavra } = req.query;
+            
+            // Em produção, validaria o jogoId no banco de dados
+            // Aqui retornamos uma dica simples
+            
+            if (!palavra) {
+                return res.status(400).json({ error: 'Palavra não especificada' });
+            }
+            
+            // Retornar a primeira letra e última letra como dica
+            return res.status(200).json({
+                dica: `A palavra "${palavra}" começa com "${palavra[0]}" e termina com "${palavra[palavra.length-1]}"`,
+                custoDica: 5 // pontos perdidos por usar dica
+            });
+        }
+        
+        return res.status(404).json({ error: 'Endpoint não encontrado' });
     }
-}
-
-function handleHint(req, res) {
-    const { remainingWords, gameId } = req.body;
-
-    if (!remainingWords || !gameId || remainingWords.length === 0) {
-        res.status(400).json({ 
-            success: false, 
-            error: 'Dados incompletos' 
-        });
-        return;
-    }
-
-    const session = gameSessions.get(gameId);
     
-    if (!session) {
-        res.status(400).json({ 
-            success: false, 
-            error: 'Sessão inválida' 
-        });
-        return;
+    if (req.method === 'POST') {
+        let body;
+        try {
+            body = JSON.parse(req.body || '{}');
+        } catch (e) {
+            body = {};
+        }
+        
+        // Endpoint para validar palavra encontrada
+        if (body.acao === 'validar-palavra') {
+            const { jogoId, posicoesSelecionadas, grade, posicoesPalavras } = body;
+            
+            if (!posicoesSelecionadas || !grade) {
+                return res.status(400).json({ error: 'Dados insuficientes' });
+            }
+            
+            const resultado = validarSelecao(grade, posicoesSelecionadas, posicoesPalavras);
+            
+            if (resultado) {
+                return res.status(200).json({
+                    valido: true,
+                    palavra: resultado.palavra,
+                    pontuacao: resultado.pontuacao
+                });
+            }
+            
+            return res.status(200).json({
+                valido: false,
+                mensagem: 'Palavra não encontrada ou seleção inválida'
+            });
+        }
+        
+        // Endpoint para finalizar jogo
+        if (body.acao === 'finalizar-jogo') {
+            const { jogoId, pontuacao, palavrasEncontradas, tempoDecorrido } = body;
+            
+            // Em produção, salvaria no banco de dados
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: 'Jogo finalizado com sucesso!',
+                pontuacaoFinal: pontuacao,
+                palavrasEncontradas: palavrasEncontradas.length,
+                tempoDecorrido
+            });
+        }
+        
+        return res.status(404).json({ error: 'Endpoint não encontrado' });
     }
-
-    // Selecionar palavra aleatória das restantes
-    const randomWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
     
-    // Incrementar contador de dicas
-    session.hintsUsed++;
-
-    // Penalidade por usar dica
-    const penalty = 15;
-
-    res.status(200).json({
-        success: true,
-        word: randomWord,
-        penalty,
-        hintsUsed: session.hintsUsed
-    });
-}
+    return res.status(405).json({ error: 'Método não permitido' });
+};
