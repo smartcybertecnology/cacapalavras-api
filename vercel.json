@@ -1,33 +1,8 @@
 {
-  "headers": [
-    {
-      "source": "/api/cleanup",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "https://playjogosgratis.com" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
-      ]
+  "version": 3,
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs24.x"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/cleanup",
-      "schedule": "0 0 1 * *"
-    }
-  ],
-  "rewrites": [
-     { "source": "/astro", "destination": "/astro/index.html" },
-    { "source": "/sequenciadepalavras", "destination": "/sequenciadepalavras/index.html" },
-    { "source": "/aventuras", "destination": "/aventuras/index.html" },
-    { "source": "/cacapalavras", "destination": "/cacapalavras/index.html" },
-    { "source": "/encontreospares", "destination": "/encontreospares/index.html" },
-    { "source": "/inglescomemojis", "destination": "/inglescomemojis/index.html" },
-    { "source": "/instrumentos", "destination": "/instrumentos/index.html" },
-    { "source": "/pulocalculado", "destination": "/pulocalculado/index.html" },
-    { "source": "/sequenciadecores", "destination": "/sequenciadecores/index.html" },
-     { "source": "/sequenciavisual", "destination": "/sequenciavisual/index.html" },
-      { "source": "/traducaocomemojis", "destination": "/traducaocomemojis/index.html" }
- 
-  ]
+  }
 }
