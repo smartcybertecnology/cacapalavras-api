@@ -2,7 +2,14 @@
   "name": "cacapalavras-api",
   "version": "1.0.0",
   "type": "module",
+  "main": "api/api.js",
   "engines": {
     "node": "20.x"
-  }
+  },
+  "scripts": {
+    "start": "node api/api.js",
+    "dev": "node --watch api/api.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
 }
