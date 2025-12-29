@@ -50,14 +50,8 @@ const DIFFICULTY_CONFIG = {
 };
 
 const DIRECTIONS = [
-    [0, 1],   // horizontal direita
-    [1, 0],   // vertical baixo
-    [1, 1],   // diagonal direita-baixo
-    [-1, 1],  // diagonal direita-cima
-    [0, -1],  // horizontal esquerda
-    [-1, 0],  // vertical cima
-    [-1, -1], // diagonal esquerda-cima
-    [1, -1]   // diagonal esquerda-baixo
+    [0, 1], [1, 0], [1, 1], [-1, 1],
+    [0, -1], [-1, 0], [-1, -1], [1, -1]
 ];
 
 const gameSessions = new Map();
@@ -69,9 +63,8 @@ function generateGrid(words, gridSize) {
     words.forEach(word => {
         let placed = false;
         let attempts = 0;
-        const maxAttempts = 100;
 
-        while (!placed && attempts < maxAttempts) {
+        while (!placed && attempts < 100) {
             const direction = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
             const startRow = Math.floor(Math.random() * gridSize);
             const startCol = Math.floor(Math.random() * gridSize);
@@ -122,9 +115,7 @@ function canPlaceWord(grid, word, row, col, direction, gridSize) {
 
 function placeWord(grid, word, row, col, direction) {
     for (let i = 0; i < word.length; i++) {
-        const newRow = row + direction[0] * i;
-        const newCol = col + direction[1] * i;
-        grid[newRow][newCol] = word[i];
+        grid[row + direction[0] * i][col + direction[1] * i] = word[i];
     }
 }
 
@@ -143,18 +134,7 @@ function validateWord(word, cells, wordPositions) {
         const match = correctPositions.some(pos => 
             pos.row === cells[i].row && pos.col === cells[i].col
         );
-        if (!match) {
-            return false;
-        }
-    }
-
-    for (let i = 0; i < cells.length - 1; i++) {
-        const rowDiff = Math.abs(cells[i + 1].row - cells[i].row);
-        const colDiff = Math.abs(cells[i + 1].col - cells[i].col);
-        
-        if (rowDiff > 1 || colDiff > 1 || (rowDiff === 0 && colDiff === 0)) {
-            return false;
-        }
+        if (!match) return false;
     }
 
     return true;
@@ -164,223 +144,173 @@ function calculatePoints(word, difficulty, hintsUsed) {
     const basePoints = DIFFICULTY_CONFIG[difficulty].basePoints;
     const lengthBonus = word.length * 5;
     const hintPenalty = hintsUsed * 10;
-    
     return Math.max(0, basePoints + lengthBonus - hintPenalty);
 }
 
-function handleThemes(req, res) {
-    const themes = Object.keys(THEMES).map(key => ({
-        id: key,
-        label: THEMES[key].label
-    }));
-
-    res.status(200).json({
-        success: true,
-        themes
-    });
-}
-
-function handleGenerate(req, res) {
-    const { theme, difficulty } = req.body;
-
-    if (!theme || !difficulty) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Tema e dificuldade são obrigatórios' 
-        });
-    }
-
-    if (!THEMES[theme]) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Tema inválido' 
-        });
-    }
-
-    if (!DIFFICULTY_CONFIG[difficulty]) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Dificuldade inválida' 
-        });
-    }
-
-    const words = THEMES[theme].words[difficulty];
-    const config = DIFFICULTY_CONFIG[difficulty];
-    const { grid, wordPositions } = generateGrid(words, config.gridSize);
-
-    const gameId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    gameSessions.set(gameId, {
-        theme,
-        difficulty,
-        wordPositions,
-        words,
-        createdAt: Date.now(),
-        hintsUsed: 0
-    });
-
-    const oneHourAgo = Date.now() - 3600000;
-    for (const [key, session] of gameSessions.entries()) {
-        if (session.createdAt < oneHourAgo) {
-            gameSessions.delete(key);
-        }
-    }
-
-    res.status(200).json({
-        success: true,
-        gameId,
-        grid,
-        words,
-        timeLimit: config.timeLimit,
-        difficulty
-    });
-}
-
-function handleValidate(req, res) {
-    const { word, cells, gameId } = req.body;
-
-    if (!word || !cells || !gameId) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Dados incompletos para validação' 
-        });
-    }
-
-    if (!Array.isArray(cells) || cells.length === 0) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Células inválidas' 
-        });
-    }
-
-    const session = gameSessions.get(gameId);
+module.exports = async (req, res) => {
+    // CORS Headers
+    const origin = req.headers.origin || req.headers.referer || '';
     
-    if (!session) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Sessão de jogo inválida ou expirada' 
-        });
-    }
-
-    const isValid = validateWord(word, cells, session.wordPositions);
-
-    if (isValid) {
-        const points = calculatePoints(word, session.difficulty, session.hintsUsed);
-        
-        return res.status(200).json({
-            success: true,
-            valid: true,
-            points,
-            word
-        });
-    } else {
-        return res.status(200).json({
-            success: true,
-            valid: false,
-            points: 0
-        });
-    }
-}
-
-function handleHint(req, res) {
-    const { remainingWords, gameId } = req.body;
-
-    if (!remainingWords || !gameId || remainingWords.length === 0) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Dados incompletos para dica' 
-        });
-    }
-
-    const session = gameSessions.get(gameId);
-    
-    if (!session) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Sessão inválida' 
-        });
-    }
-
-    const randomWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
-    
-    session.hintsUsed++;
-
-    const penalty = 15;
-
-    res.status(200).json({
-        success: true,
-        word: randomWord,
-        penalty,
-        hintsUsed: session.hintsUsed
-    });
-}
-
-export default async function handler(req, res) {
-    const origin = req.headers.origin || req.headers.referer;
-    
-    if (origin && origin.includes(ALLOWED_ORIGIN)) {
+    if (origin.includes('playjogosgratis.com')) {
         res.setHeader('Access-Control-Allow-Origin', origin);
     } else {
         res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
     }
     
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
     res.setHeader('Access-Control-Max-Age', '86400');
     res.setHeader('Content-Type', 'application/json');
 
+    // Handle OPTIONS
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+        res.status(200).end();
+        return;
     }
 
+    // Only POST allowed
     if (req.method !== 'POST') {
-        return res.status(405).json({ 
-            success: false, 
-            error: 'Método não permitido' 
-        });
+        res.status(405).json({ success: false, error: 'Método não permitido' });
+        return;
     }
 
-    if (!origin || !origin.includes(ALLOWED_ORIGIN)) {
-        return res.status(403).json({ 
-            success: false, 
-            error: 'Acesso negado - origem não autorizada' 
-        });
+    // Verify origin
+    if (!origin.includes('playjogosgratis.com')) {
+        res.status(403).json({ success: false, error: 'Acesso negado' });
+        return;
     }
 
     try {
         const action = req.query.action;
+        let body = {};
+
+        // Parse body for non-themes actions
+        if (action !== 'themes' && req.body) {
+            if (typeof req.body === 'string') {
+                body = JSON.parse(req.body);
+            } else {
+                body = req.body;
+            }
+        }
 
         switch (action) {
-            case 'themes':
-                return handleThemes(req, res);
-            
-            case 'generate':
-                return handleGenerate(req, res);
-            
-            case 'validate':
-                return handleValidate(req, res);
-            
-            case 'hint':
-                return handleHint(req, res);
-            
-            default:
-                return res.status(400).json({ 
-                    success: false, 
-                    error: 'Ação inválida' 
+            case 'themes': {
+                const themes = Object.keys(THEMES).map(key => ({
+                    id: key,
+                    label: THEMES[key].label
+                }));
+                res.status(200).json({ success: true, themes });
+                break;
+            }
+
+            case 'generate': {
+                const { theme, difficulty } = body;
+
+                if (!theme || !difficulty) {
+                    res.status(400).json({ success: false, error: 'Tema e dificuldade obrigatórios' });
+                    return;
+                }
+
+                if (!THEMES[theme] || !DIFFICULTY_CONFIG[difficulty]) {
+                    res.status(400).json({ success: false, error: 'Tema ou dificuldade inválidos' });
+                    return;
+                }
+
+                const words = THEMES[theme].words[difficulty];
+                const config = DIFFICULTY_CONFIG[difficulty];
+                const { grid, wordPositions } = generateGrid(words, config.gridSize);
+
+                const gameId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                gameSessions.set(gameId, {
+                    theme,
+                    difficulty,
+                    wordPositions,
+                    words,
+                    createdAt: Date.now(),
+                    hintsUsed: 0
                 });
+
+                // Clean old sessions
+                const oneHourAgo = Date.now() - 3600000;
+                for (const [key, session] of gameSessions.entries()) {
+                    if (session.createdAt < oneHourAgo) {
+                        gameSessions.delete(key);
+                    }
+                }
+
+                res.status(200).json({
+                    success: true,
+                    gameId,
+                    grid,
+                    words,
+                    timeLimit: config.timeLimit,
+                    difficulty
+                });
+                break;
+            }
+
+            case 'validate': {
+                const { word, cells, gameId } = body;
+
+                if (!word || !cells || !gameId) {
+                    res.status(400).json({ success: false, error: 'Dados incompletos' });
+                    return;
+                }
+
+                const session = gameSessions.get(gameId);
+                
+                if (!session) {
+                    res.status(400).json({ success: false, error: 'Sessão inválida' });
+                    return;
+                }
+
+                const isValid = validateWord(word, cells, session.wordPositions);
+
+                if (isValid) {
+                    const points = calculatePoints(word, session.difficulty, session.hintsUsed);
+                    res.status(200).json({ success: true, valid: true, points, word });
+                } else {
+                    res.status(200).json({ success: true, valid: false, points: 0 });
+                }
+                break;
+            }
+
+            case 'hint': {
+                const { remainingWords, gameId } = body;
+
+                if (!remainingWords || !gameId || remainingWords.length === 0) {
+                    res.status(400).json({ success: false, error: 'Dados incompletos' });
+                    return;
+                }
+
+                const session = gameSessions.get(gameId);
+                
+                if (!session) {
+                    res.status(400).json({ success: false, error: 'Sessão inválida' });
+                    return;
+                }
+
+                const randomWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
+                session.hintsUsed++;
+
+                res.status(200).json({
+                    success: true,
+                    word: randomWord,
+                    penalty: 15,
+                    hintsUsed: session.hintsUsed
+                });
+                break;
+            }
+
+            default:
+                res.status(400).json({ success: false, error: 'Ação inválida' });
         }
     } catch (error) {
         console.error('API Error:', error);
-        return res.status(500).json({ 
+        res.status(500).json({ 
             success: false, 
-            error: 'Erro interno do servidor',
-            details: error.message
+            error: 'Erro interno',
+            message: error.message 
         });
     }
-}
-```
-
-## 3. **Estrutura correta no Vercel:**
-```
-cacapalavras-api/
-└── api/
-    └── index.js
+};
