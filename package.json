@@ -1,0 +1,13 @@
+{
+  "name": "cacapalavras-api",
+  "version": "1.0.0",
+  "description": "API para jogo de caça-palavras",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": "18.x"
+  }
+}
