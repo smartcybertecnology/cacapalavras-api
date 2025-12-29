@@ -1,74 +1,37 @@
-// api/api.js - VERSÃO CORRIGIDA E FUNCIONAL
-export const config = {
-  runtime: 'edge',
-};
+// api/api.js - VERSÃO CORRIGIDA
+export const config = { runtime: 'edge' };
 
 export default async function handler(request) {
-  // 1. Verificação de domínio
-  const origin = request.headers.get('origin') || request.headers.get('referer') || '';
-  const allowedDomains = ['playjogosgratis.com'];
-  const isAllowed = allowedDomains.some(domain => origin.includes(domain));
+  // 1. Verificação de domínio FLEXÍVEL
+  const origin = request.headers.get('origin') || '';
+  const referer = request.headers.get('referer') || '';
   
-  // 2. Se não for permitido, retorna bloqueio
-  if (!isAllowed && !origin.includes('localhost')) {
-    const blockCode = `// ⚠️ ACESSO NEGADO ⚠️
-    console.error("❌ Este jogo só está disponível em: https://playjogosgratis.com");
-    
-    document.addEventListener('DOMContentLoaded', function() {
-      document.body.innerHTML = \`
-        <div style="
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          color: white;
-          font-family: Arial, sans-serif;
-          text-align: center;
-          padding: 20px;
-        ">
-          <div>
-            <h1 style="font-size: 2.5em; margin-bottom: 20px;">🎮 Acesso Restrito</h1>
-            <p style="font-size: 1.2em;">
-              Este jogo está disponível apenas em:<br>
-              <strong style="font-size: 1.5em;">playjogosgratis.com</strong>
-            </p>
-            <button onclick="window.location.href='https://playjogosgratis.com/cacapalavras/'" 
-              style="
-                margin-top: 30px;
-                padding: 15px 30px;
-                background: white;
-                border: none;
-                border-radius: 25px;
-                font-size: 1.1em;
-                cursor: pointer;
-                color: #764ba2;
-                font-weight: bold;
-              ">
-              🔗 Ir para o Jogo Oficial
-            </button>
-          </div>
-        </div>
-      \`;
-    });`;
-    
-    return new Response(blockCode, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/javascript',
-        'Cache-Control': 'public, max-age=3600'
-      }
-    });
+  // Domínios permitidos
+  const allowedDomains = [
+    'playjogosgratis.com',
+    'localhost',
+    '127.0.0.1'
+  ];
+  
+  // Verificação flexível
+  let isAllowed = false;
+  
+  // Verifica origem
+  allowedDomains.forEach(domain => {
+    if (origin.includes(domain) || referer.includes(domain)) {
+      isAllowed = true;
+    }
+  });
+  
+  // 2. Se não for permitido, retorna bloqueio SIMPLIFICADO
+  if (!isAllowed) {
+    return new Response(
+      'console.log("🔒 Acesso verificado - carregando jogo...");',
+      { headers: { 'Content-Type': 'application/javascript' } }
+    );
   }
   
-  // 3. SE FOR PERMITIDO, RETORNA O JOGO COMPLETO
-  console.log(`✅ Permitido: ${origin}`);
-  
-  // 4. Código do jogo COMPLETO (cole seu código aqui)
+  // 3. JOGO COMPLETO
   const gameCode = `// ============================================
 // 🌟 CAÇA-PALAVRAS MÁGICO - VERSÃO PROTEGIDA
 // ============================================
@@ -103,100 +66,118 @@ const WORD_SETS = [
     }
 ];
 
-// Variáveis do jogo
-let currentLevel = null;
-let currentTheme = 0;
-let currentWords = [];
-let foundWords = [];
-let gameGrid = [];
-let wordPositions = [];
-let isDragging = false;
-let startCell = null;
-let selectedCells = [];
-let timerInterval = null;
-let secondsElapsed = 0;
-let size = 0;
-let score = 0;
-let combo = 0;
-let hintsRemaining = 3;
-let firstPlay = true;
-let instructionTimeout = null;
-
-// Elementos DOM
-const startScreen = document.getElementById('start-screen');
-const gameScreen = document.getElementById('game-screen');
-const endScreen = document.getElementById('end-screen');
-const gridContainer = document.getElementById('word-search-grid');
-const wordListElement = document.getElementById('word-list');
-const timerElement = document.getElementById('timer');
-const scoreElement = document.getElementById('score');
-const progressFill = document.getElementById('progress-fill');
-const comboDisplay = document.getElementById('combo-display');
-const comboCount = document.getElementById('combo-count');
-const hintButton = document.getElementById('hint-button');
-const starsContainer = document.getElementById('stars-container');
-const tutorialOverlay = document.getElementById('tutorial-overlay');
-
-// Função para mostrar tela
-function showScreen(id) {
-    document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
-    document.getElementById(id).classList.remove('hidden');
-}
-
-// Função básica de tutorial
+// =================== FUNÇÕES GLOBAIS ===================
+// ESSENCIAIS: Funções chamadas por onclick no HTML
 window.showTutorial = function() {
-    document.getElementById('tutorial-overlay').classList.remove('hidden');
+  console.log('📖 Mostrando tutorial');
+  document.getElementById('tutorial-overlay').classList.remove('hidden');
 };
 
 window.closeTutorial = function() {
-    document.getElementById('tutorial-overlay').classList.add('hidden');
+  console.log('📖 Fechando tutorial');
+  document.getElementById('tutorial-overlay').classList.add('hidden');
 };
 
-// Inicialização básica
+window.skipTutorial = function() {
+  console.log('⏭️ Pulando tutorial');
+  document.getElementById('tutorial-overlay').classList.add('hidden');
+  if (typeof firstPlay !== 'undefined') firstPlay = false;
+};
+
+window.showScreen = function(id) {
+  console.log('🖥️ Mostrando tela:', id);
+  document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+  const target = document.getElementById(id);
+  if (target) target.classList.remove('hidden');
+};
+
+// Função de utilidade
+window.createParticles = function() {
+  const particles = document.getElementById('particles');
+  if (!particles) return;
+  
+  particles.innerHTML = '';
+  const emojis = ['⭐', '🌟', '✨', '💫', '🎨', '🎪', '🎭', '🎨'];
+  
+  for (let i = 0; i < 15; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    particle.style.left = Math.random() * 100 + '%';
+    particle.style.top = Math.random() * 100 + '%';
+    particle.style.animationDelay = Math.random() * 5 + 's';
+    particle.style.animationDuration = (8 + Math.random() * 4) + 's';
+    particles.appendChild(particle);
+  }
+};
+
+// =================== INICIALIZAÇÃO ===================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎮 Caça-Palavras carregado com sucesso!');
-    showScreen('start-screen');
-    
-    // Botões de tema
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('selected'));
-            this.classList.add('selected');
-            currentTheme = parseInt(this.dataset.theme);
-        });
+  console.log('🎮 Caça-Palavras inicializando...');
+  
+  // Inicializar partículas
+  if (typeof createParticles === 'function') {
+    createParticles();
+  }
+  
+  // Mostrar tela inicial
+  const startScreen = document.getElementById('start-screen');
+  if (startScreen) {
+    startScreen.classList.remove('hidden');
+  }
+  
+  // Configurar botões de tema
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('selected'));
+      this.classList.add('selected');
+      console.log('🎨 Tema selecionado:', this.dataset.theme);
     });
-    
-    // Botões de nível - SIMPLIFICADO PARA TESTE
-    document.querySelectorAll('[data-level]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const level = this.dataset.level;
-            console.log('Iniciando nível:', level);
-            showScreen('game-screen');
-        });
+  });
+  
+  // Configurar botões de nível (simplificado)
+  document.querySelectorAll('[data-level]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const level = this.dataset.level;
+      console.log('🎯 Nível selecionado:', level);
+      showScreen('game-screen');
     });
-    
-    // Botão de dica
-    document.getElementById('hint-button').addEventListener('click', function() {
-        console.log('Dica solicitada');
-        alert('Funcionalidade de dica ativada!');
+  });
+  
+  // Configurar botão de dica
+  const hintBtn = document.getElementById('hint-button');
+  if (hintBtn) {
+    hintBtn.addEventListener('click', function() {
+      console.log('💡 Dica solicitada');
+      alert('Funcionalidade de dica em desenvolvimento!');
     });
-    
-    // Botão reset
-    document.getElementById('reset-button').addEventListener('click', function() {
-        if (confirm('Reiniciar jogo?')) {
-            showScreen('start-screen');
-        }
-    });
-    
-    // Botão jogar novamente
-    document.getElementById('play-again-button').addEventListener('click', function() {
+  }
+  
+  // Configurar botão reset
+  const resetBtn = document.getElementById('reset-button');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function() {
+      if (confirm('Deseja reiniciar o jogo?')) {
         showScreen('start-screen');
+      }
     });
+  }
+  
+  // Configurar botão jogar novamente
+  const playAgainBtn = document.getElementById('play-again-button');
+  if (playAgainBtn) {
+    playAgainBtn.addEventListener('click', function() {
+      showScreen('start-screen');
+    });
+  }
+  
+  console.log('✅ Jogo Caça-Palavras carregado com sucesso!');
 });
 
-console.log('✅ Jogo Caça-Palavras carregado!');`;
-  
-  // 5. Retorna o código do jogo
+// =================== LOG INICIAL ===================
+console.log('🎮 Jogo Caça-Palavras carregado da API!');`;
+
+  // 4. Retorna o código do jogo
   return new Response(gameCode, {
     status: 200,
     headers: {
