@@ -1,10 +1,10 @@
-// api/api.js - Retorna apenas JSON puro
+// api/api.js - Retorna JSON com dados do jogo e verificação de domínio
 export const config = { runtime: 'edge' };
 
-// Domínios permitidos
+// Domínios permitidos (apenas playjogosgratis.com)
 const ALLOWED_DOMAINS = [
   'playjogosgratis.com',
-  'cacapalavras-api.vercel.app',
+  'www.playjogosgratis.com',
   'localhost:3000'
 ];
 
@@ -57,14 +57,35 @@ const GAME_DATA = {
 };
 
 export default async function handler(request) {
-  const origin = request.headers.get('origin') || '';
-  const isAllowed = ALLOWED_DOMAINS.some(domain => origin.includes(domain));
+  const origin = request.headers.get('origin') || request.headers.get('referer') || '';
+  const host = request.headers.get('host') || '';
   
-  // Configura CORS
+  // Extrai o domínio da origem
+  let domain = '';
+  try {
+    if (origin) {
+      const url = new URL(origin);
+      domain = url.hostname;
+    } else if (host) {
+      domain = host.split(':')[0];
+    }
+  } catch (e) {
+    domain = '';
+  }
+  
+  // Verifica se o domínio está permitido
+  const isAllowed = ALLOWED_DOMAINS.some(allowed => 
+    domain === allowed || 
+    domain.endsWith('.' + allowed)
+  );
+  
+  // Headers CORS
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': isAllowed ? origin : 'https://playjogosgratis.com',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Vary': 'Origin'
   };
   
   // Se for requisição OPTIONS (preflight)
@@ -72,20 +93,21 @@ export default async function handler(request) {
     return new Response(null, { headers });
   }
   
-  // Adiciona info de domínio
+  // Prepara resposta
   const response = {
     ...GAME_DATA,
     domainInfo: {
-      origin,
+      domain,
       allowed: isAllowed,
       requiredDomain: 'playjogosgratis.com'
     }
   };
   
-  // Se não for domínio permitido, adiciona mensagem
-  if (!isAllowed && origin && !origin.includes('localhost')) {
+  // Se não for permitido, adiciona mensagem de bloqueio
+  if (!isAllowed && domain && !domain.includes('localhost')) {
     response.accessBlocked = true;
     response.message = "❌ Este jogo só está disponível em: https://playjogosgratis.com";
+    response.redirectUrl = "https://playjogosgratis.com";
   }
   
   return new Response(JSON.stringify(response, null, 2), {
