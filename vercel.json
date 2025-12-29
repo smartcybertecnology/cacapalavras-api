@@ -4,42 +4,34 @@
     {
       "src": "api/api.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "tracking.js",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/tracking.js",
-      "dest": "/tracking.js"
-    },
-    {
-      "src": "/api/api.js",
+      "src": "/api/(.*)",
       "dest": "/api/api.js"
-    },
-    {
-      "src": "/(.*)",
-      "status": 404,
-      "dest": "/index.html"
     }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://playjogosgratis.com" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS" },
-        { "key": "Content-Type", "value": "application/javascript" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://playjogosgratis.com https://cacapalavras-api.vercel.app"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        }
       ]
     }
   ]
