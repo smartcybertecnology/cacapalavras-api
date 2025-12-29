@@ -1,8 +1,18 @@
 {
-  "version": 3,
-  "functions": {
-    "api/*.js": {
-      "runtime": "nodejs24.x"
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/api.js",
+      "use": "@vercel/node"
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/api.js",
+      "dest": "/api/api.js",
+      "headers": {
+        "Content-Type": "application/javascript"
+      }
+    }
+  ]
 }
