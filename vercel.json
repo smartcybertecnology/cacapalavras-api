@@ -1,18 +1,8 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/api.js",
-      "use": "@vercel/node"
+  "functions": {
+    "api/api.js": {
+      "runtime": "edge"
     }
-  ],
-  "routes": [
-    {
-      "src": "/api.js",
-      "dest": "/api/api.js",
-      "headers": {
-        "Content-Type": "application/javascript"
-      }
-    }
-  ]
+  }
 }
