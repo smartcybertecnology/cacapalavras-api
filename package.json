@@ -1,8 +1,8 @@
 {
-  "name": "cacapalavras-api",
-  "version": "1.0.0",
-  "type": "module",
-  "engines": {
-    "node": "24.x"
+  "version": 2,
+  "functions": {
+    "api/api.js": {
+      "runtime": "nodejs20.x"
+    }
   }
 }
