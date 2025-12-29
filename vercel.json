@@ -1,3 +1,46 @@
 {
-  "version": 2
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/api.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "tracking.js",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/tracking.js",
+      "dest": "/tracking.js"
+    },
+    {
+      "src": "/api/api.js",
+      "dest": "/api/api.js"
+    },
+    {
+      "src": "/(.*)",
+      "status": 404,
+      "dest": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "https://playjogosgratis.com" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS" },
+        { "key": "Content-Type", "value": "application/javascript" }
+      ]
+    }
+  ]
 }
