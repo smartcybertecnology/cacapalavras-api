@@ -6,8 +6,7 @@ export default async function handler(request, response) {
     // DOMÍNIOS PERMITIDOS
     const ALLOWED_DOMAINS = [
         'https://playjogosgratis.com',
-        'http://playjogosgratis.com',
-        // Adicione outros subdomínios se necessário
+        'http://playjogosgratis.com'
     ];
     
     // VERIFICA SE A ORIGEM É PERMITIDA
@@ -94,122 +93,27 @@ export default async function handler(request, response) {
     
     console.log(`✅ Permitido: ${origin}`);
     
-    // TODO: AQUI VOCÊ COLA TODO O CÓDIGO DO SEU JOGO
-    // (o JavaScript que estava no index.html)
-    
-    const gameCode = `
-        // ============================================
-        // 🌟 CAÇA-PALAVRAS MÁGICO - VERSÃO PROTEGIDA
-        // ============================================
+    // TODO: COLE AQUI TODO O SEU CÓDIGO DO JOGO
+    // (remova este comentário e cole o código JavaScript completo do seu jogo)
+    const gameCode = \`
+        // ========================
+        // CAÇA-PALAVRAS MÁGICO
+        // ========================
         
-        // Configurações
-        const LEVELS = {
-            easy: { size: 6, words: 6, timeBonus: 5 },
-            normal: { size: 8, words: 8, timeBonus: 3 },
-            hard: { size: 10, words: 10, timeBonus: 2 }
+        console.log('🎮 Jogo Caça-Palavras carregado da API!');
+        
+        // Seu código do jogo completo aqui...
+        // Cole todo o JavaScript do seu index.html aqui
+        
+        // Exemplo de função básica:
+        window.showTutorial = function() {
+            document.getElementById('tutorial-overlay').classList.remove('hidden');
         };
-
-        const WORD_SETS = [
-            { theme: "ESCOLA 📚", words: ["LIVRO", "LAPIS", "CADERNO", "ESCOLA", "AULA", "MESA"] },
-            { theme: "ANIMAIS 🦁", words: ["GATO", "CACHORRO", "LEAO", "TIGRE", "URSO", "COELHO"] },
-            { theme: "FRUTAS 🍎", words: ["MACA", "BANANA", "UVA", "LARANJA", "MANGA", "PERA"] },
-            { theme: "VEÍCULOS 🚗", words: ["CARRO", "MOTO", "AVIAO", "NAVIO", "TREM", "ONIBUS"] },
-            { theme: "CORES 🎨", words: ["AZUL", "VERDE", "AMARELO", "ROXO", "ROSA", "BRANCO"] }
-        ];
         
-        // Variáveis do jogo
-        let currentLevel = null;
-        let currentTheme = 0;
-        let currentWords = [];
-        let foundWords = [];
-        let gameGrid = [];
-        let wordPositions = [];
-        let isDragging = false;
-        let startCell = null;
-        let selectedCells = [];
-        let timerInterval = null;
-        let secondsElapsed = 0;
-        let size = 0;
-        let score = 0;
-        let combo = 0;
-        let hintsRemaining = 3;
-        let firstPlay = true;
-        let instructionTimeout = null;
-        
-        // Inicialização
-        (function() {
-            console.log('🎮 Caça-Palavras carregado com sucesso!');
-            
-            // Elementos DOM
-            const startScreen = document.getElementById('start-screen');
-            const gameScreen = document.getElementById('game-screen');
-            const endScreen = document.getElementById('end-screen');
-            const gridContainer = document.getElementById('word-search-grid');
-            const wordListElement = document.getElementById('word-list');
-            const timerElement = document.getElementById('timer');
-            const scoreElement = document.getElementById('score');
-            const progressFill = document.getElementById('progress-fill');
-            const comboDisplay = document.getElementById('combo-display');
-            const comboCount = document.getElementById('combo-count');
-            const hintButton = document.getElementById('hint-button');
-            const starsContainer = document.getElementById('stars-container');
-            const tutorialOverlay = document.getElementById('tutorial-overlay');
-            
-            // ============ COLE AQUI TODAS AS FUNÇÕES DO SEU JOGO ============
-            // 1. Funções de Tutorial
-            function showTutorial() { /* seu código */ }
-            function closeTutorial() { /* seu código */ }
-            
-            // 2. Funções de Utilidade
-            function createParticles() { /* seu código */ }
-            
-            // 3. Geração do Jogo
-            function generateGrid(levelConfig) { /* seu código */ }
-            function placeWord(word) { /* seu código */ }
-            function renderGrid() { /* seu código */ }
-            
-            // 4. Temporizador e Pontuação
-            function startTimer() { /* seu código */ }
-            function calculateScore(wordLength) { /* seu código */ }
-            
-            // 5. Eventos
-            function handleStart(event) { /* seu código */ }
-            function handleMove(event) { /* seu código */ }
-            function handleEnd(event) { /* seu código */ }
-            
-            // 6. Controle do Jogo
-            function startGame(level) { /* seu código */ }
-            function checkWin() { /* seu código */ }
-            function resetGame() { /* seu código */ }
-            
-            // ============ EVENT LISTENERS ============
-            document.querySelectorAll('.theme-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    currentTheme = parseInt(this.dataset.theme);
-                    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('selected'));
-                    this.classList.add('selected');
-                });
-            });
-            
-            document.querySelectorAll('[data-level]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    startGame(this.dataset.level);
-                });
-            });
-            
-            // Mais event listeners...
-            
-            // Inicializar
-            createParticles();
-            document.getElementById('start-screen').classList.remove('hidden');
-            
-            console.log('✅ Jogo inicializado com sucesso!');
-        })();
-        
-        // Ofuscação extra (opcional)
-        window._g = window.onerror; window.onerror = null;
-        setTimeout(() => { window.onerror = window._g; }, 5000);
-    `;
+        window.closeTutorial = function() {
+            document.getElementById('tutorial-overlay').classList.add('hidden');
+        };
+    \`;
     
     // Retorna o código do jogo
     return response.status(200)
