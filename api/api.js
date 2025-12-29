@@ -1,209 +1,219 @@
-/**
- * =====================================================================
- * SIMULAÇÃO DE LÓGICA DE BACKEND E DADOS DE INSTRUMENTOS
- * (Hosted em https://instrumentos-api.vercel.app/api/api.js)
- * =====================================================================
- *
- * NOTA IMPORTANTE:
- * Quando este arquivo é incluído via <script src="...">, ele é executado
- * no navegador do cliente, tornando os dados visíveis.
- *
- * Para proteger totalmente a lógica (como solicitado), a arquitetura correta
- * seria:
- * 1. O cliente (index.html) faz uma requisição HTTP (fetch) para a URL da API.
- * 2. O backend (este código em Node.js/Express) processa a requisição.
- * 3. O backend envia os dados ou executa a lógica.
- *
- * Abaixo, demonstramos *como* a lógica de controle CORS e manipulação de
- * requisições OPTIONS seria implementada em um servidor real (Node.js/Express
- * ou Vercel Serverless Function), conforme solicitado.
- */
-
-// Este é um exemplo de função de handler (como um Serverless Function do Vercel)
-// que controlaria o CORS e a requisição OPTIONS.
-function handler(req, res) {
-    const allowedOrigin = 'https://playjogosgratis.com';
-    const origin = req.headers.origin;
-
-    // 1. Controle CORS (res.setHeader)
-    if (origin && origin === allowedOrigin) {
-        res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-    } else {
-        // Para requisições de domínios não permitidos, não define o cabeçalho ACAO,
-        // ou retorna um erro de permissão.
-        // res.status(403).send('Acesso Negado');
-        // return;
+// api/api.js - CÓDIGO COMPLETO DO JOGO COM VERIFICAÇÃO SERVIDOR
+export default async function handler(request, response) {
+    // OBTER O DOMÍNIO DE ORIGEM DA REQUISIÇÃO
+    const origin = request.headers.get('origin') || request.headers.get('referer') || '';
+    
+    // DOMÍNIOS PERMITIDOS
+    const ALLOWED_DOMAINS = [
+        'https://playjogosgratis.com',
+        'http://playjogosgratis.com',
+        // Adicione outros subdomínios se necessário
+    ];
+    
+    // VERIFICA SE A ORIGEM É PERMITIDA
+    const isOriginAllowed = ALLOWED_DOMAINS.some(domain => 
+        origin.includes(domain.replace(/https?:\/\//, ''))
+    );
+    
+    // SE NÃO FOR O DOMÍNIO CORRETO, RETORNA CÓDIGO VAZIO
+    if (!isOriginAllowed) {
+        console.log(`❌ Bloqueado: ${origin}`);
+        
+        // Retorna um arquivo JS que BLOQUEIA o jogo no cliente
+        return response.status(200)
+            .setHeader('Content-Type', 'application/javascript')
+            .send(`
+                // ⚠️ ACESSO NEGADO ⚠️
+                console.error("❌ Este jogo só está disponível em: https://playjogosgratis.com");
+                
+                // Substitui toda a página por mensagem de erro
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.body.innerHTML = \`
+                        <div style="
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            color: white;
+                            font-family: Arial, sans-serif;
+                            text-align: center;
+                            padding: 20px;
+                        ">
+                            <div>
+                                <h1 style="font-size: 2.5em; margin-bottom: 20px;">🎮 Acesso Restrito</h1>
+                                <p style="font-size: 1.2em;">
+                                    Este jogo está disponível apenas em:<br>
+                                    <strong style="font-size: 1.5em;">playjogosgratis.com</strong>
+                                </p>
+                                <p style="margin-top: 30px; opacity: 0.8;">
+                                    Se você está acessando do domínio correto,<br>
+                                    verifique se há algum bloqueador de scripts.
+                                </p>
+                                <button onclick="window.location.href='https://playjogosgratis.com/cacapalavras/'" 
+                                    style="
+                                        margin-top: 30px;
+                                        padding: 15px 30px;
+                                        background: white;
+                                        border: none;
+                                        border-radius: 25px;
+                                        font-size: 1.1em;
+                                        cursor: pointer;
+                                        color: #764ba2;
+                                        font-weight: bold;
+                                    ">
+                                    🔗 Ir para o Jogo Oficial
+                                </button>
+                            </div>
+                        </div>
+                    \`;
+                    
+                    // Bloqueia qualquer tentativa de inspecionar
+                    document.addEventListener('keydown', function(e) {
+                        if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+                            e.preventDefault();
+                            return false;
+                        }
+                    });
+                    
+                    document.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        return false;
+                    });
+                });
+            `);
     }
-
-    // 2. Tratamento da Requisição OPTIONS (Pré-voo CORS)
-    if (req.method === 'OPTIONS') {
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-        res.setHeader('Access-Control-Max-Age', 86400); // Cache do pré-voo por 24h
-        res.status(204).end(); // Retorna 204 (No Content) para OPTIONS
-        return;
-    }
-
-    // Lógica principal do jogo (exemplo: retornar dados JSON)
-    // res.status(200).json({ instruments: INSTRUMENTS_DATA });
-}
-// Fim da simulação do código de servidor
-// =====================================================================
-
-
-/**
- * DADOS EXPOSTOS PARA O CLIENTE (index.html)
- *
- * Estes dados seriam normalmente retornados como JSON via requisição fetch (GET),
- * mas para a simulação de inclusão de script, eles são expostos globalmente.
- *
- * URLs de áudio são de fontes abertas e gratuitas para demonstração.
- */
-
-// Define URLs de base para simplificar a definição dos instrumentos
-const BASE_DRUM_URL = 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/t-99/';
-const BASE_KEYBOARD_URL = 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/t-99/keyboard-';
-
-export const INSTRUMENTS_DATA = [
-    {
-        id: 'drumkit',
-        name: 'Bateria Musical',
-        icon: '🥁',
-        color: 'bg-red-500',
-        parts: [
-            { id: 'crash', name: 'Prato', soundUrl: BASE_DRUM_URL + 'crash.mp3' },
-            { id: 'hihat', name: 'Hi-Hat', soundUrl: BASE_DRUM_URL + 'hihat.mp3' },
-            { id: 'snare', name: 'Caixa', soundUrl: BASE_DRUM_URL + 'snare.mp3' },
-            { id: 'kick', name: 'Bumbo', soundUrl: BASE_DRUM_URL + 'kick.mp3' },
-            { id: 'tom1', name: 'Tom 1', soundUrl: BASE_DRUM_URL + 'tom1.mp3' },
-            { id: 'tom2', name: 'Tom 2', soundUrl: BASE_DRUM_URL + 'tom2.mp3' },
-        ]
-    },
-    {
-        id: 'keyboard',
-        name: 'Teclado Mágico',
-        icon: '🎹',
-        color: 'bg-blue-500',
-        parts: [
-            // Usando notas do C4 ao C5 como exemplo
-            { id: 'c4', name: 'C4', soundUrl: BASE_KEYBOARD_URL + 'c4.mp3' },
-            { id: 'd4', name: 'D4', soundUrl: BASE_KEYBOARD_URL + 'd4.mp3' },
-            { id: 'e4', name: 'E4', soundUrl: BASE_KEYBOARD_URL + 'e4.mp3' },
-            { id: 'f4', name: 'F4', soundUrl: BASE_KEYBOARD_URL + 'f4.mp3' },
-            { id: 'g4', name: 'G4', soundUrl: BASE_KEYBOARD_URL + 'g4.mp3' },
-            { id: 'a4', name: 'A4', soundUrl: BASE_KEYBOARD_URL + 'a4.mp3' },
-            { id: 'b4', name: 'B4', soundUrl: BASE_KEYBOARD_URL + 'b4.mp3' },
-            { id: 'c5', name: 'C5', soundUrl: BASE_KEYBOARD_URL + 'c5.mp3' },
-        ]
-    },
-    {
-        id: 'ukulele',
-        name: 'Ukulele Havaiano',
-        icon: '🎸',
-        color: 'bg-orange-500',
-        parts: [
-            { id: 'string_g', name: 'Cordel G', soundUrl: BASE_DRUM_URL + 'ukulele-g.mp3' },
-            { id: 'string_c', name: 'Cordel C', soundUrl: BASE_DRUM_URL + 'ukulele-c.mp3' },
-            { id: 'string_e', name: 'Cordel E', soundUrl: BASE_DRUM_URL + 'ukulele-e.mp3' },
-            { id: 'string_a', name: 'Cordel A', soundUrl: BASE_DRUM_URL + 'ukulele-a.mp3' },
-        ]
-    },
-    {
-        id: 'saxophone',
-        name: 'Saxofone Suave',
-        icon: '🎷',
-        color: 'bg-teal-500',
-        parts: [
-            { id: 'main', name: 'Saxofone', soundUrl: BASE_DRUM_URL + 'saxophone.mp3' }
-        ]
-    },
-    {
-        id: 'tambourine',
-        name: 'Pandeiro Animado',
-        icon: '🪘',
-        color: 'bg-lime-500',
-        parts: [
-            { id: 'hit', name: 'Tocar', soundUrl: BASE_DRUM_URL + 'tambourine-hit.mp3' },
-            { id: 'shake', name: 'Agitar', soundUrl: BASE_DRUM_URL + 'tambourine-shake.mp3' }
-        ]
-    },
-    {
-        id: 'accordion',
-        name: 'Sanfona Alegre',
-        icon: '🪗',
-        color: 'bg-green-500',
-        // Simplificando com um som único de Sanfona para o propósito da demo
-        parts: [
-            { id: 'main', name: 'Sanfona', soundUrl: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/t-99/accordion.mp3' }
-        ]
-    },
-    {
-        id: 'flute',
-        name: 'Flauta Doce',
-        icon: '🎶',
-        color: 'bg-yellow-500',
-        // Simplificando com um som único de Flauta
-        parts: [
-            { id: 'main', name: 'Flauta', soundUrl: 'https://s3-us-west-2.amazonaws.com/s.cdpn.io/t-99/flute.mp3' }
-        ]
-    },
-];
-
-// O cliente (index.html) terá acesso a esta variável.
-window.INSTRUMENTS_DATA = INSTRUMENTS_DATA;
-window.SOUND_CACHE = {}; // Cache para armazenar objetos Audio
-
-/**
- * Função principal de lógica de reprodução de som.
- * Isto simula que a lógica de como o som é tocado (incluindo tratamento de cache)
- * está fora do cliente.
- *
- * @param {string} soundUrl URL do arquivo de áudio.
- */
-window.playInstrumentSound = function(soundUrl) {
-    if (!soundUrl) {
-        console.error("URL de som inválida fornecida.");
-        return;
-    }
-
-    let audio;
-    if (window.SOUND_CACHE[soundUrl]) {
-        // Reutiliza o objeto Audio do cache
-        audio = window.SOUND_CACHE[soundUrl];
-        audio.currentTime = 0; // Reinicia o som
-    } else {
-        // Cria e armazena novo objeto Audio no cache
-        audio = new Audio(soundUrl);
-        // Adiciona tratamento de erro no carregamento, se necessário
-        audio.onerror = () => {
-             console.error(`Erro ao carregar o som: ${soundUrl}. Verifique se a URL está correta.`);
+    
+    // ============================================
+    // 🔥 SE FOR O DOMÍNIO CORRETO, ENVIA O JOGO COMPLETO
+    // ============================================
+    
+    console.log(`✅ Permitido: ${origin}`);
+    
+    // TODO: AQUI VOCÊ COLA TODO O CÓDIGO DO SEU JOGO
+    // (o JavaScript que estava no index.html)
+    
+    const gameCode = `
+        // ============================================
+        // 🌟 CAÇA-PALAVRAS MÁGICO - VERSÃO PROTEGIDA
+        // ============================================
+        
+        // Configurações
+        const LEVELS = {
+            easy: { size: 6, words: 6, timeBonus: 5 },
+            normal: { size: 8, words: 8, timeBonus: 3 },
+            hard: { size: 10, words: 10, timeBonus: 2 }
         };
-        window.SOUND_CACHE[soundUrl] = audio;
-    }
 
-    // Tenta reproduzir. O try/catch é crucial, pois alguns navegadores
-    // bloqueiam a reprodução automática sem interação inicial do usuário.
-    try {
-        audio.play().catch(e => {
-            console.warn("Reprodução de áudio falhou (provavelmente devido a restrições do navegador).", e);
-            // Mensagem amigável ao usuário (opcional)
-            const messageBox = document.getElementById('message-box');
-            if (messageBox) {
-                messageBox.textContent = 'Clique em qualquer lugar da tela para ativar o áudio!';
-                messageBox.classList.remove('opacity-0', 'pointer-events-none');
-                setTimeout(() => {
-                    messageBox.classList.add('opacity-0', 'pointer-events-none');
-                }, 3000);
-            }
-        });
-    } catch (e) {
-        console.error("Erro fatal ao tentar tocar o áudio:", e);
-    }
-};
-
-// Funções de utilidade que simulam lógica de "API"
-window.getInstrumentById = function(id) {
-    return INSTRUMENTS_DATA.find(inst => inst.id === id);
-};
-
-console.log("Módulo de Instrumentos API carregado. Dados e lógica prontos.");
+        const WORD_SETS = [
+            { theme: "ESCOLA 📚", words: ["LIVRO", "LAPIS", "CADERNO", "ESCOLA", "AULA", "MESA"] },
+            { theme: "ANIMAIS 🦁", words: ["GATO", "CACHORRO", "LEAO", "TIGRE", "URSO", "COELHO"] },
+            { theme: "FRUTAS 🍎", words: ["MACA", "BANANA", "UVA", "LARANJA", "MANGA", "PERA"] },
+            { theme: "VEÍCULOS 🚗", words: ["CARRO", "MOTO", "AVIAO", "NAVIO", "TREM", "ONIBUS"] },
+            { theme: "CORES 🎨", words: ["AZUL", "VERDE", "AMARELO", "ROXO", "ROSA", "BRANCO"] }
+        ];
+        
+        // Variáveis do jogo
+        let currentLevel = null;
+        let currentTheme = 0;
+        let currentWords = [];
+        let foundWords = [];
+        let gameGrid = [];
+        let wordPositions = [];
+        let isDragging = false;
+        let startCell = null;
+        let selectedCells = [];
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let size = 0;
+        let score = 0;
+        let combo = 0;
+        let hintsRemaining = 3;
+        let firstPlay = true;
+        let instructionTimeout = null;
+        
+        // Inicialização
+        (function() {
+            console.log('🎮 Caça-Palavras carregado com sucesso!');
+            
+            // Elementos DOM
+            const startScreen = document.getElementById('start-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const endScreen = document.getElementById('end-screen');
+            const gridContainer = document.getElementById('word-search-grid');
+            const wordListElement = document.getElementById('word-list');
+            const timerElement = document.getElementById('timer');
+            const scoreElement = document.getElementById('score');
+            const progressFill = document.getElementById('progress-fill');
+            const comboDisplay = document.getElementById('combo-display');
+            const comboCount = document.getElementById('combo-count');
+            const hintButton = document.getElementById('hint-button');
+            const starsContainer = document.getElementById('stars-container');
+            const tutorialOverlay = document.getElementById('tutorial-overlay');
+            
+            // ============ COLE AQUI TODAS AS FUNÇÕES DO SEU JOGO ============
+            // 1. Funções de Tutorial
+            function showTutorial() { /* seu código */ }
+            function closeTutorial() { /* seu código */ }
+            
+            // 2. Funções de Utilidade
+            function createParticles() { /* seu código */ }
+            
+            // 3. Geração do Jogo
+            function generateGrid(levelConfig) { /* seu código */ }
+            function placeWord(word) { /* seu código */ }
+            function renderGrid() { /* seu código */ }
+            
+            // 4. Temporizador e Pontuação
+            function startTimer() { /* seu código */ }
+            function calculateScore(wordLength) { /* seu código */ }
+            
+            // 5. Eventos
+            function handleStart(event) { /* seu código */ }
+            function handleMove(event) { /* seu código */ }
+            function handleEnd(event) { /* seu código */ }
+            
+            // 6. Controle do Jogo
+            function startGame(level) { /* seu código */ }
+            function checkWin() { /* seu código */ }
+            function resetGame() { /* seu código */ }
+            
+            // ============ EVENT LISTENERS ============
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentTheme = parseInt(this.dataset.theme);
+                    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                });
+            });
+            
+            document.querySelectorAll('[data-level]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    startGame(this.dataset.level);
+                });
+            });
+            
+            // Mais event listeners...
+            
+            // Inicializar
+            createParticles();
+            document.getElementById('start-screen').classList.remove('hidden');
+            
+            console.log('✅ Jogo inicializado com sucesso!');
+        })();
+        
+        // Ofuscação extra (opcional)
+        window._g = window.onerror; window.onerror = null;
+        setTimeout(() => { window.onerror = window._g; }, 5000);
+    `;
+    
+    // Retorna o código do jogo
+    return response.status(200)
+        .setHeader('Content-Type', 'application/javascript')
+        .setHeader('Cache-Control', 'public, max-age=3600')
+        .send(gameCode);
+}
