@@ -1,316 +1,312 @@
-const ALLOWED_ORIGIN = 'https://playjogosgratis.com';
+// api/index.js - API para o jogo de caça-palavras
+// Hospedado em: https://cacapalavras-api.vercel.app/api
 
-const THEMES = {
+const temas = {
     escola: {
-        label: 'Escola',
-        words: {
-            facil: ['LAPIS', 'LIVRO', 'MESA', 'LOUSA', 'GIZ'],
-            normal: ['CADERNO', 'MOCHILA', 'ESTOJO', 'BORRACHA', 'REGUA', 'TESOURA'],
-            dificil: ['PROFESSOR', 'BIBLIOTECA', 'EDUCACAO', 'ALFABETO', 'CALENDARIO', 'MATEMATICA', 'GEOGRAFIA']
-        }
+        palavras: ["LIVRO", "CANETA", "CADERNO", "PROFESSOR", "SALA", "ALUNO", "QUADRO", "MOCHILA"],
+        descricao: "Objetos da escola"
     },
     animais: {
-        label: 'Animais',
-        words: {
-            facil: ['GATO', 'CAO', 'PATO', 'URSO', 'SAPO'],
-            normal: ['CAVALO', 'COELHO', 'TIGRE', 'MACACO', 'GIRAFA', 'ZEBRA'],
-            dificil: ['ELEFANTE', 'RINOCERONTE', 'PAPAGAIO', 'TARTARUGA', 'BORBOLETA', 'CROCODILO', 'PINGUIM']
-        }
+        palavras: ["CACHORRO", "GATO", "ELEFANTE", "LEAO", "GIRAFA", "TIGRE", "ZEBRA", "MACACO"],
+        descricao: "Animais diversos"
     },
     frutas: {
-        label: 'Frutas',
-        words: {
-            facil: ['UVA', 'PERA', 'MACA', 'KIWI', 'LIMA'],
-            normal: ['BANANA', 'LARANJA', 'MORANGO', 'ABACAXI', 'MELANCIA', 'MANGA'],
-            dificil: ['FRAMBOESA', 'TANGERINA', 'MARACUJA', 'JABUTICABA', 'CARAMBOLA', 'PITANGA', 'ACEROLA']
-        }
+        palavras: ["BANANA", "MACA", "LARANJA", "UVA", "MORANGO", "ABACAXI", "PERA", "MELANCIA"],
+        descricao: "Frutas deliciosas"
     },
     veiculos: {
-        label: 'Veículos',
-        words: {
-            facil: ['CARRO', 'MOTO', 'NAVIO', 'AVIAO', 'TREM'],
-            normal: ['ONIBUS', 'CAMINHAO', 'BICICLETA', 'HELICOPTERO', 'BARCO', 'METRO'],
-            dificil: ['AMBULANCIA', 'MOTOCICLETA', 'ESCAVADEIRA', 'SUBMARINO', 'TELEFERICO', 'FOGUETE', 'MONORAIL']
-        }
+        palavras: ["CARRO", "MOTO", "ONIBUS", "AVIAO", "NAVIO", "BICICLETA", "CAMINHAO", "TRATOR"],
+        descricao: "Meios de transporte"
     },
     cores: {
-        label: 'Cores',
-        words: {
-            facil: ['AZUL', 'ROSA', 'ROXO', 'VERDE', 'CINZA'],
-            normal: ['AMARELO', 'VERMELHO', 'LARANJA', 'MARROM', 'BRANCO', 'PRETO'],
-            dificil: ['TURQUESA', 'VIOLETA', 'MAGENTA', 'DOURADO', 'PRATEADO', 'BEGE', 'CORAL']
-        }
+        palavras: ["AZUL", "VERMELHO", "VERDE", "AMARELO", "ROSA", "ROXO", "LARANJA", "PRETO"],
+        descricao: "Cores diversas"
     }
 };
 
-const DIFFICULTY_CONFIG = {
-    facil: { gridSize: 8, timeLimit: 300, basePoints: 10 },
-    normal: { gridSize: 10, timeLimit: 240, basePoints: 20 },
-    dificil: { gridSize: 12, timeLimit: 180, basePoints: 30 }
+const dificuldades = {
+    facil: {
+        tamanho: 10,
+        tempoLimite: 300,
+        pontuacaoBase: 10
+    },
+    normal: {
+        tamanho: 15,
+        tempoLimite: 450,
+        pontuacaoBase: 15
+    },
+    dificil: {
+        tamanho: 20,
+        tempoLimite: 600,
+        pontuacaoBase: 20
+    }
 };
 
-const DIRECTIONS = [
-    [0, 1], [1, 0], [1, 1], [-1, 1],
-    [0, -1], [-1, 0], [-1, -1], [1, -1]
-];
-
-const gameSessions = new Map();
-
-function generateGrid(words, gridSize) {
-    const grid = Array(gridSize).fill().map(() => Array(gridSize).fill(''));
-    const wordPositions = new Map();
-
-    words.forEach(word => {
-        let placed = false;
-        let attempts = 0;
-
-        while (!placed && attempts < 100) {
-            const direction = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
-            const startRow = Math.floor(Math.random() * gridSize);
-            const startCol = Math.floor(Math.random() * gridSize);
-
-            if (canPlaceWord(grid, word, startRow, startCol, direction, gridSize)) {
-                placeWord(grid, word, startRow, startCol, direction);
+function gerarGrade(palavras, tamanho) {
+    const grade = Array(tamanho).fill().map(() => Array(tamanho).fill(''));
+    const direcoes = [
+        [0, 1], [1, 0], [1, 1], [1, -1]
+    ];
+    
+    const posicoesPalavras = [];
+    
+    palavras.forEach(palavra => {
+        let colocada = false;
+        let tentativas = 0;
+        
+        while (!colocada && tentativas < 100) {
+            tentativas++;
+            
+            const dir = direcoes[Math.floor(Math.random() * direcoes.length)];
+            const dirX = dir[0];
+            const dirY = dir[1];
+            
+            const startX = dirX > 0 ? 
+                Math.floor(Math.random() * (tamanho - palavra.length * dirX)) :
+                Math.floor(Math.random() * tamanho);
                 
-                const positions = [];
-                for (let i = 0; i < word.length; i++) {
-                    positions.push({
-                        row: startRow + direction[0] * i,
-                        col: startCol + direction[1] * i
-                    });
+            const startY = dirY > 0 ? 
+                Math.floor(Math.random() * (tamanho - palavra.length * Math.abs(dirY))) :
+                (dirY < 0 ? 
+                    Math.floor(Math.random() * (tamanho - palavra.length * Math.abs(dirY))) + palavra.length - 1 :
+                    Math.floor(Math.random() * tamanho));
+            
+            let podeColocar = true;
+            const posicoes = [];
+            
+            for (let i = 0; i < palavra.length; i++) {
+                const x = startX + i * dirX;
+                const y = startY + i * dirY;
+                
+                if (x >= 0 && x < tamanho && y >= 0 && y < tamanho) {
+                    if (grade[x][y] !== '' && grade[x][y] !== palavra[i]) {
+                        podeColocar = false;
+                        break;
+                    }
+                    posicoes.push({x, y, letra: palavra[i]});
+                } else {
+                    podeColocar = false;
+                    break;
                 }
-                wordPositions.set(word, positions);
-                placed = true;
             }
-            attempts++;
+            
+            if (podeColocar) {
+                posicoes.forEach(pos => {
+                    grade[pos.x][pos.y] = pos.letra;
+                });
+                
+                posicoesPalavras.push({
+                    palavra: palavra,
+                    posicoes: posicoes.map(p => ({x: p.x, y: p.y}))
+                });
+                
+                colocada = true;
+            }
         }
     });
-
-    for (let i = 0; i < gridSize; i++) {
-        for (let j = 0; j < gridSize; j++) {
-            if (grid[i][j] === '') {
-                grid[i][j] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    
+    const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (let i = 0; i < tamanho; i++) {
+        for (let j = 0; j < tamanho; j++) {
+            if (grade[i][j] === '') {
+                grade[i][j] = letras[Math.floor(Math.random() * letras.length)];
             }
         }
     }
-
-    return { grid, wordPositions };
-}
-
-function canPlaceWord(grid, word, row, col, direction, gridSize) {
-    for (let i = 0; i < word.length; i++) {
-        const newRow = row + direction[0] * i;
-        const newCol = col + direction[1] * i;
-
-        if (newRow < 0 || newRow >= gridSize || newCol < 0 || newCol >= gridSize) {
-            return false;
-        }
-
-        if (grid[newRow][newCol] !== '' && grid[newRow][newCol] !== word[i]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-function placeWord(grid, word, row, col, direction) {
-    for (let i = 0; i < word.length; i++) {
-        grid[row + direction[0] * i][col + direction[1] * i] = word[i];
-    }
-}
-
-function validateWord(word, cells, wordPositions) {
-    if (!wordPositions.has(word)) {
-        return false;
-    }
-
-    const correctPositions = wordPositions.get(word);
     
-    if (cells.length !== correctPositions.length) {
-        return false;
-    }
-
-    for (let i = 0; i < cells.length; i++) {
-        const match = correctPositions.some(pos => 
-            pos.row === cells[i].row && pos.col === cells[i].col
-        );
-        if (!match) return false;
-    }
-
-    return true;
+    return { grade, posicoesPalavras };
 }
 
-function calculatePoints(word, difficulty, hintsUsed) {
-    const basePoints = DIFFICULTY_CONFIG[difficulty].basePoints;
-    const lengthBonus = word.length * 5;
-    const hintPenalty = hintsUsed * 10;
-    return Math.max(0, basePoints + lengthBonus - hintPenalty);
+function validarSelecao(grade, posicoesSelecionadas, posicoesPalavras) {
+    const coordenadas = posicoesSelecionadas.map(p => ({x: p[0], y: p[1]}));
+    
+    // Verificar alinhamento
+    if (coordenadas.length < 2) return null;
+    
+    const dx = coordenadas[1].x - coordenadas[0].x;
+    const dy = coordenadas[1].y - coordenadas[0].y;
+    
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) return null;
+    
+    // Verificar consistência
+    for (let i = 2; i < coordenadas.length; i++) {
+        const dxi = coordenadas[i].x - coordenadas[i-1].x;
+        const dyi = coordenadas[i].y - coordenadas[i-1].y;
+        
+        if (dxi !== dx || dyi !== dy) return null;
+    }
+    
+    // Formar palavra
+    let palavra = '';
+    coordenadas.forEach(pos => {
+        palavra += grade[pos.x][pos.y];
+    });
+    
+    // Verificar se palavra existe (em qualquer direção)
+    const palavraReversa = palavra.split('').reverse().join('');
+    
+    for (const dados of posicoesPalavras) {
+        if (dados.palavra === palavra || dados.palavra === palavraReversa) {
+            // Verificar correspondência de posições
+            const posicoesPalavra = dados.posicoes;
+            const encontrouNormal = posicoesPalavra.every((pos, idx) => 
+                pos.x === coordenadas[idx].x && pos.y === coordenadas[idx].y
+            );
+            const encontrouReverso = posicoesPalavra.every((pos, idx) => 
+                pos.x === coordenadas[coordenadas.length - 1 - idx].x && 
+                pos.y === coordenadas[coordenadas.length - 1 - idx].y
+            );
+            
+            if (encontrouNormal || encontrouReverso) {
+                return {
+                    palavra: dados.palavra,
+                    encontrada: true,
+                    pontuacao: dados.palavra.length * 10
+                };
+            }
+        }
+    }
+    
+    return null;
 }
 
 module.exports = async (req, res) => {
-    // CORS Headers
-    const origin = req.headers.origin || req.headers.referer || '';
+    // Configuração de CORS
+    const allowedOrigin = 'https://playjogosgratis.com';
+    const origin = req.headers.origin;
     
-    if (origin.includes('playjogosgratis.com')) {
+    // Permitir apenas o domínio específico
+    if (origin && origin === allowedOrigin) {
         res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Max-Age', '86400');
     } else {
-        res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+        return res.status(403).json({ 
+            error: 'Acesso não autorizado. Este recurso está disponível apenas para https://playjogosgratis.com' 
+        });
     }
     
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
-    res.setHeader('Access-Control-Max-Age', '86400');
-    res.setHeader('Content-Type', 'application/json');
-
-    // Handle OPTIONS
+    // Lidar com OPTIONS preflight
     if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+        return res.status(200).end();
     }
-
-    // Only POST allowed
-    if (req.method !== 'POST') {
-        res.status(405).json({ success: false, error: 'Método não permitido' });
-        return;
-    }
-
-    // Verify origin
-    if (!origin.includes('playjogosgratis.com')) {
-        res.status(403).json({ success: false, error: 'Acesso negado' });
-        return;
-    }
-
+    
     try {
-        const action = req.query.action;
-        let body = {};
-
-        // Parse body for non-themes actions
-        if (action !== 'themes' && req.body) {
-            if (typeof req.body === 'string') {
-                body = JSON.parse(req.body);
-            } else {
-                body = req.body;
-            }
-        }
-
-        switch (action) {
-            case 'themes': {
-                const themes = Object.keys(THEMES).map(key => ({
-                    id: key,
-                    label: THEMES[key].label
+        if (req.method === 'GET') {
+            if (req.query.acao === 'temas') {
+                const listaTemas = Object.keys(temas).map(tema => ({
+                    id: tema,
+                    nome: tema.charAt(0).toUpperCase() + tema.slice(1),
+                    descricao: temas[tema].descricao,
+                    quantidade: temas[tema].palavras.length
                 }));
-                res.status(200).json({ success: true, themes });
-                break;
-            }
-
-            case 'generate': {
-                const { theme, difficulty } = body;
-
-                if (!theme || !difficulty) {
-                    res.status(400).json({ success: false, error: 'Tema e dificuldade obrigatórios' });
-                    return;
-                }
-
-                if (!THEMES[theme] || !DIFFICULTY_CONFIG[difficulty]) {
-                    res.status(400).json({ success: false, error: 'Tema ou dificuldade inválidos' });
-                    return;
-                }
-
-                const words = THEMES[theme].words[difficulty];
-                const config = DIFFICULTY_CONFIG[difficulty];
-                const { grid, wordPositions } = generateGrid(words, config.gridSize);
-
-                const gameId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                gameSessions.set(gameId, {
-                    theme,
-                    difficulty,
-                    wordPositions,
-                    words,
-                    createdAt: Date.now(),
-                    hintsUsed: 0
-                });
-
-                // Clean old sessions
-                const oneHourAgo = Date.now() - 3600000;
-                for (const [key, session] of gameSessions.entries()) {
-                    if (session.createdAt < oneHourAgo) {
-                        gameSessions.delete(key);
-                    }
-                }
-
-                res.status(200).json({
-                    success: true,
-                    gameId,
-                    grid,
-                    words,
-                    timeLimit: config.timeLimit,
-                    difficulty
-                });
-                break;
-            }
-
-            case 'validate': {
-                const { word, cells, gameId } = body;
-
-                if (!word || !cells || !gameId) {
-                    res.status(400).json({ success: false, error: 'Dados incompletos' });
-                    return;
-                }
-
-                const session = gameSessions.get(gameId);
                 
-                if (!session) {
-                    res.status(400).json({ success: false, error: 'Sessão inválida' });
-                    return;
-                }
-
-                const isValid = validateWord(word, cells, session.wordPositions);
-
-                if (isValid) {
-                    const points = calculatePoints(word, session.difficulty, session.hintsUsed);
-                    res.status(200).json({ success: true, valid: true, points, word });
-                } else {
-                    res.status(200).json({ success: true, valid: false, points: 0 });
-                }
-                break;
-            }
-
-            case 'hint': {
-                const { remainingWords, gameId } = body;
-
-                if (!remainingWords || !gameId || remainingWords.length === 0) {
-                    res.status(400).json({ success: false, error: 'Dados incompletos' });
-                    return;
-                }
-
-                const session = gameSessions.get(gameId);
-                
-                if (!session) {
-                    res.status(400).json({ success: false, error: 'Sessão inválida' });
-                    return;
-                }
-
-                const randomWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
-                session.hintsUsed++;
-
-                res.status(200).json({
-                    success: true,
-                    word: randomWord,
-                    penalty: 15,
-                    hintsUsed: session.hintsUsed
+                return res.status(200).json({
+                    temas: listaTemas,
+                    dificuldades: Object.keys(dificuldades).map(d => ({
+                        id: d,
+                        nome: d.charAt(0).toUpperCase() + d.slice(1),
+                        ...dificuldades[d]
+                    }))
                 });
-                break;
             }
-
-            default:
-                res.status(400).json({ success: false, error: 'Ação inválida' });
+            
+            if (req.query.acao === 'novo-jogo') {
+                const { tema, dificuldade } = req.query;
+                
+                if (!tema || !temas[tema]) {
+                    return res.status(400).json({ error: 'Tema inválido' });
+                }
+                
+                if (!dificuldade || !dificuldades[dificuldade]) {
+                    return res.status(400).json({ error: 'Dificuldade inválida' });
+                }
+                
+                const palavras = [...temas[tema].palavras];
+                const tamanho = dificuldades[dificuldade].tamanho;
+                const tempoLimite = dificuldades[dificuldade].tempoLimite;
+                
+                const { grade, posicoesPalavras } = gerarGrade(palavras, tamanho);
+                
+                const jogoId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+                
+                return res.status(200).json({
+                    jogoId,
+                    tema,
+                    dificuldade,
+                    grade,
+                    palavras: palavras,
+                    posicoesPalavras, // Incluir as posições para validação
+                    tempoLimite,
+                    tempoInicio: Date.now(),
+                    pontuacaoBase: dificuldades[dificuldade].pontuacaoBase,
+                    dicasDisponiveis: 3,
+                    tamanhoGrade: tamanho
+                });
+            }
+            
+            if (req.query.acao === 'dica') {
+                const { palavra } = req.query;
+                
+                if (!palavra) {
+                    return res.status(400).json({ error: 'Palavra não especificada' });
+                }
+                
+                return res.status(200).json({
+                    dica: `Dica: "${palavra}" começa com "${palavra[0]}" e tem ${palavra.length} letras.`,
+                    custoDica: 5
+                });
+            }
+            
+            return res.status(404).json({ error: 'Endpoint não encontrado' });
         }
+        
+        if (req.method === 'POST') {
+            let body;
+            try {
+                body = JSON.parse(req.body || '{}');
+            } catch (e) {
+                body = req.body || {};
+            }
+            
+            if (body.acao === 'validar-palavra') {
+                const { posicoesSelecionadas, grade, posicoesPalavras } = body;
+                
+                if (!posicoesSelecionadas || !grade || !posicoesPalavras) {
+                    return res.status(400).json({ error: 'Dados insuficientes para validação' });
+                }
+                
+                const resultado = validarSelecao(grade, posicoesSelecionadas, posicoesPalavras);
+                
+                if (resultado) {
+                    return res.status(200).json({
+                        valido: true,
+                        palavra: resultado.palavra,
+                        pontuacao: resultado.pontuacao
+                    });
+                }
+                
+                return res.status(200).json({
+                    valido: false,
+                    mensagem: 'Seleção inválida'
+                });
+            }
+            
+            if (body.acao === 'finalizar-jogo') {
+                return res.status(200).json({
+                    sucesso: true,
+                    mensagem: 'Jogo finalizado'
+                });
+            }
+            
+            return res.status(404).json({ error: 'Endpoint não encontrado' });
+        }
+        
+        return res.status(405).json({ error: 'Método não permitido' });
+        
     } catch (error) {
-        console.error('API Error:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Erro interno',
-            message: error.message 
-        });
+        console.error('Erro na API:', error);
+        return res.status(500).json({ error: 'Erro interno do servidor' });
     }
 };
